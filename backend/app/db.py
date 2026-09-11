@@ -7,6 +7,7 @@ from pathlib import Path
 import aiosqlite
 
 from app.config import get_settings
+from app.geo import is_private_ip, near_sensor
 from app.models import (
     EventFilters,
     HiveEvent,
@@ -61,6 +62,39 @@ async def connect() -> aiosqlite.Connection:
     await conn.execute("PRAGMA synchronous=NORMAL")
     return conn
 
+
+
+
+async def backfill_missing_src_geo() -> int:
+    conn = await connect()
+    try:
+        cur = await conn.execute(
+            """
+            SELECT id, src_ip, sensor_lat, sensor_lon, src_country
+            FROM events
+            WHERE src_lat IS NULL OR src_lon IS NULL
+            """
+        )
+        rows = await cur.fetchall()
+        count = 0
+        for row in rows:
+            lat, lon = near_sensor(
+                row["src_ip"] or "",
+                float(row["sensor_lat"] or 0.0),
+                float(row["sensor_lon"] or 0.0),
+            )
+            country = row["src_country"] or "UNK"
+            if is_private_ip(row["src_ip"] or "") and country in ("", "UNK"):
+                country = "LAN"
+            await conn.execute(
+                "UPDATE events SET src_lat = ?, src_lon = ?, src_country = ? WHERE id = ?",
+                (lat, lon, country, row["id"]),
+            )
+            count += 1
+        await conn.commit()
+        return count
+    finally:
+        await conn.close()
 
 async def init_db() -> None:
     conn = await connect()

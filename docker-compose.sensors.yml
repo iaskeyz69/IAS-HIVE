@@ -1,0 +1,36 @@
+name: hive-sensors
+
+# Bait-plane only. Do not attach this stack to hive_mgmt.
+# Logs land in ./data/logs for hive-api to tail read-only.
+
+services:
+  cowrie:
+    image: cowrie/cowrie:latest
+    container_name: hive-cowrie
+    restart: unless-stopped
+    ports:
+      - "10.0.10.4:2222:2222"
+    volumes:
+      - ./data/logs/cowrie-01:/cowrie/cowrie-git/var/log/cowrie
+    networks:
+      - hive_bait
+
+  opencanary:
+    image: thinkst/opencanary:latest
+    container_name: hive-opencanary
+    restart: unless-stopped
+    ports:
+      - "10.0.10.4:21:21"
+      - "10.0.10.4:23:23"
+      - "10.0.10.4:3306:3306"
+      - "10.0.10.4:6379:6379"
+      - "10.0.10.4:8080:8080"
+    volumes:
+      - ./sensors/opencanary.conf:/etc/opencanaryd/opencanary.conf:ro
+      - ./data/logs/opencanary-01:/var/tmp/opencanary
+    networks:
+      - hive_bait
+
+networks:
+  hive_bait:
+    driver: bridge

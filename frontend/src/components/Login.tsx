@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { api, AuthError } from "../lib/api";
-import { saveAuth } from "../lib/auth";
+import { clearAuth, saveAuth } from "../lib/auth";
 
 export function Login({ onAuthed }: { onAuthed: (token: string) => void }) {
   const [user, setUser] = useState("");
@@ -17,48 +17,56 @@ export function Login({ onAuthed }: { onAuthed: (token: string) => void }) {
       await api.health(token);
       onAuthed(token);
     } catch (err) {
-      if (err instanceof AuthError) setError("ACCESS DENIED");
-      else setError("LINK DOWN");
+      clearAuth();
+      if (err instanceof AuthError) setError("Wrong user or password");
+      else setError("Hive is unreachable");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="flex h-full items-center justify-center bg-hive-bg">
-      <form
-        onSubmit={submit}
-        className="hud-corners w-[380px] border border-hive-line bg-hive-panel p-8"
-      >
-        <span className="c-br" />
-        <span className="c-bl" />
-        <p className="label-hud text-hive-gold">IAS HIVE</p>
-        <h1 className="mt-2 font-sans text-xl tracking-wide text-white">COMMAND CENTER</h1>
-        <p className="mt-2 font-mono text-xs text-hive-muted">AUTHENTICATE TO CONTINUE</p>
-        <label className="label-hud mt-6 block">OPERATOR</label>
+    <div className="flex h-full items-center justify-center bg-hive-bg px-4">
+      <form data-testid="login-form" onSubmit={submit} className="hive-float w-full max-w-sm rounded-card p-6">
+        <p className="font-mono text-lg font-semibold tracking-[0.28em] text-hive-cyan">HIVE</p>
+        <p className="mt-2 text-sm text-hive-quiet">Sign in to watch the bait sensors.</p>
+        <label className="mt-6 block font-mono text-xs tracking-wide text-hive-quiet" htmlFor="operator">
+          Operator
+        </label>
         <input
-          className="mt-1 w-full border border-hive-line bg-hive-bg px-3 py-2 font-mono text-sm text-white outline-none focus:border-hive-gold"
+          id="operator"
+          data-testid="login-user"
+          className="mt-1 w-full rounded-lg bg-hive-bg px-3 py-2 text-sm text-hive-ink outline-none ring-1 ring-hive-line focus:ring-hive-cyan"
           value={user}
           onChange={(e) => setUser(e.target.value)}
           autoComplete="username"
           required
         />
-        <label className="label-hud mt-4 block">PASSPHRASE</label>
+        <label className="mt-4 block font-mono text-xs tracking-wide text-hive-quiet" htmlFor="passphrase">
+          Password
+        </label>
         <input
+          id="passphrase"
+          data-testid="login-pass"
           type="password"
-          className="mt-1 w-full border border-hive-line bg-hive-bg px-3 py-2 font-mono text-sm text-white outline-none focus:border-hive-gold"
+          className="mt-1 w-full rounded-lg bg-hive-bg px-3 py-2 text-sm text-hive-ink outline-none ring-1 ring-hive-line focus:ring-hive-cyan"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password"
           required
         />
-        {error ? <p className="mt-3 font-mono text-xs text-hive-threat">{error}</p> : null}
+        {error ? (
+          <p data-testid="login-error" role="alert" className="mt-3 text-sm text-hive-sting">
+            {error}
+          </p>
+        ) : null}
         <button
           type="submit"
+          data-testid="login-submit"
           disabled={busy}
-          className="mt-6 w-full border border-hive-gold bg-hive-gold/10 py-2 font-sans text-xs tracking-hud text-hive-gold hover:bg-hive-gold/20 disabled:opacity-50"
+          className="mt-6 w-full rounded-full bg-hive-cyan py-2.5 text-sm font-medium text-hive-bg hover:brightness-110 disabled:opacity-50"
         >
-          {busy ? "CHECKING" : "ENGAGE"}
+          {busy ? "Checking" : "Sign in"}
         </button>
       </form>
     </div>

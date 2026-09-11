@@ -18,18 +18,28 @@ export function DetailPanel({
   if (!event && !sensor) return null;
 
   return (
-    <div className="absolute inset-x-4 bottom-4 z-20 max-h-[42%] overflow-auto border border-hive-line bg-hive-bg/95 p-4 md:inset-auto md:right-4 md:top-14 md:w-80">
-      <div className="mb-2 flex items-center justify-between">
-        <p className="label-hud text-hive-gold">{event ? "ATTACKER" : "SENSOR FEED"}</p>
-        <button type="button" onClick={onClose} className="label-hud hover:text-white">
-          CLOSE
+    <div
+      data-testid="detail-panel"
+      className="hive-float absolute bottom-24 left-3 z-30 max-h-[42%] w-[22rem] overflow-auto rounded-card p-4"
+    >
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="font-mono text-sm font-medium tracking-wide text-hive-ink">{event ? "Hit" : "Sensor"}</p>
+        <button
+          type="button"
+          data-testid="detail-close"
+          onClick={onClose}
+          className="text-sm text-hive-quiet hover:text-hive-ink"
+        >
+          Close
         </button>
       </div>
       {event ? <EventDetail event={event} /> : null}
       {sensor && !event ? (
         <div>
-          <p className="font-sans text-sm text-white">{sanitizeDisplay(sensor.label)}</p>
-          <p className="font-mono text-xs text-hive-muted">
+          <p data-testid="detail-sensor-label" className="text-hive-ink">
+            {sanitizeDisplay(sensor.label)}
+          </p>
+          <p className="text-sm text-hive-quiet">
             {sensor.lat.toFixed(4)}, {sensor.lon.toFixed(4)} · {sanitizeDisplay(sensor.type)}
           </p>
           <ul className="mt-3 space-y-1">
@@ -38,7 +48,7 @@ export function DetailPanel({
                 <button
                   type="button"
                   onClick={() => onEvent(item)}
-                  className="w-full text-left font-mono text-[11px] text-hive-muted hover:text-white"
+                  className="w-full text-left text-sm text-hive-quiet hover:text-hive-ink"
                 >
                   {item.timestamp.slice(11, 19)} {sanitizeDisplay(item.src_ip)} {sanitizeDisplay(item.protocol)}
                 </button>
@@ -55,28 +65,33 @@ function EventDetail({ event }: { event: HiveEvent }) {
   const rows: [string, string][] = [
     ["IP", sanitizeDisplay(event.src_ip)],
     ["ASN", sanitizeDisplay(event.src_asn) || "—"],
-    ["COUNTRY", sanitizeDisplay(event.src_country)],
-    ["SENSOR", sanitizeDisplay(event.sensor_id)],
-    ["PROTOCOL", `${sanitizeDisplay(event.protocol)} / ${event.dst_port}`],
-    ["TYPE", sanitizeDisplay(event.event_type)],
-    ["SESSION", sanitizeDisplay(event.session_id) || "—"],
+    ["Country", sanitizeDisplay(event.src_country)],
+    ["Sensor", sanitizeDisplay(event.sensor_id)],
+    ["Protocol", `${sanitizeDisplay(event.protocol)} / ${event.dst_port}`],
+    ["Type", sanitizeDisplay(event.event_type)],
+    ["Session", sanitizeDisplay(event.session_id) || "—"],
     ["UTC", sanitizeDisplay(event.timestamp)],
   ];
   return (
     <div>
-      <p className="mb-2 font-mono text-xs" style={{ color: severityColor(event.severity) }}>
+      <p className="mb-3 text-sm font-medium" style={{ color: severityColor(event.severity) }}>
         {severityLabel(event.severity)}
       </p>
-      <dl className="space-y-1 font-mono text-[11px]">
+      <dl className="space-y-2 text-sm">
         {rows.map(([k, v]) => (
-          <div key={k} className="flex justify-between gap-3">
-            <dt className="text-hive-muted">{k}</dt>
-            <dd className="truncate text-right text-white">{v}</dd>
+          <div key={k} className="flex items-start justify-between gap-4">
+            <dt className="shrink-0 text-hive-quiet">{k}</dt>
+            <dd
+              data-testid={k === "IP" ? "detail-ip" : undefined}
+              className="min-w-0 break-all text-right text-hive-ink"
+            >
+              {v}
+            </dd>
           </div>
         ))}
       </dl>
-      <p className="label-hud mt-3">RAW</p>
-      <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-all font-mono text-[10px] text-hive-muted">
+      <p className="mt-4 font-mono text-xs font-medium uppercase tracking-wide text-hive-quiet">Raw</p>
+      <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-hive-bg p-2 text-[11px] leading-5 text-hive-ink">
         {sanitizeDisplay(event.raw)}
       </pre>
     </div>

@@ -38,58 +38,61 @@ export function TableView({
 
   function header(col: Col, label: string) {
     return (
-      <th className="px-2 py-2 text-left">
+      <th className="px-3 py-2 text-left">
         <button
           type="button"
-          className="label-hud hover:text-hive-gold"
+          data-testid={`table-sort-${col}`}
+          className="text-sm text-hive-quiet hover:text-hive-cyan"
           onClick={() =>
             setSort((prev) => (prev.col === col ? { col, dir: prev.dir === 1 ? -1 : 1 } : { col, dir: -1 }))
           }
         >
           {label}
-          {sort.col === col ? (sort.dir === -1 ? " ▼" : " ▲") : ""}
+          {sort.col === col ? (sort.dir === -1 ? " ↓" : " ↑") : ""}
         </button>
       </th>
     );
   }
 
   return (
-    <div className="absolute inset-0 flex flex-col p-3">
+    <div data-testid="table-view" className="absolute inset-0 flex flex-col bg-hive-bg p-4 pb-20 pl-[19.5rem] pr-4 pt-14">
       <input
+        data-testid="table-filter"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="FILTER TIMESTAMP / SENSOR / IP / PORT / PROTO / SESSION"
-        className="mb-2 border border-hive-line bg-hive-bg px-3 py-2 font-mono text-xs text-white outline-none focus:border-hive-gold"
+        placeholder="Filter by time, sensor, IP, port, protocol, or session"
+        className="mb-3 rounded-lg bg-hive-panel px-3 py-2 text-sm text-hive-ink outline-none ring-1 ring-hive-line focus:ring-hive-cyan"
       />
-      <div className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full border-collapse font-mono text-[11px]">
+      <div className="min-h-0 flex-1 overflow-auto rounded-card bg-hive-panel">
+        <table className="w-full border-collapse text-sm">
           <thead className="sticky top-0 bg-hive-panel">
             <tr>
-              {header("timestamp", "TIMESTAMP")}
-              {header("sensor_id", "SENSOR")}
-              {header("src_ip", "SRC IP")}
-              {header("dst_port", "DST PORT")}
-              {header("protocol", "PROTOCOL")}
-              {header("session_id", "SESSION")}
+              {header("timestamp", "Time")}
+              {header("sensor_id", "Sensor")}
+              {header("src_ip", "Source")}
+              {header("dst_port", "Port")}
+              {header("protocol", "Protocol")}
+              {header("session_id", "Session")}
             </tr>
           </thead>
           <tbody>
             {rows.map((event) => (
               <tr
                 key={event.id}
+                data-testid="table-row"
                 onClick={() => onSelect(event)}
-                className={`cursor-pointer border-t border-hive-line/50 ${
-                  selectedId === event.id ? "bg-hive-gold/15" : "hover:bg-white/5"
+                className={`cursor-pointer border-t border-hive-line ${
+                  selectedId === event.id ? "bg-hive-bg text-hive-cyan" : "hover:bg-hive-bg/70"
                 }`}
               >
-                <td className="px-2 py-1.5 text-hive-gold">{sanitizeDisplay(event.timestamp)}</td>
-                <td className="px-2 py-1.5">{sanitizeDisplay(event.sensor_id)}</td>
-                <td className="px-2 py-1.5">{sanitizeDisplay(event.src_ip)}</td>
-                <td className="px-2 py-1.5">{event.dst_port}</td>
-                <td className="px-2 py-1.5" style={{ color: severityColor(event.severity) }}>
+                <td className="px-3 py-2 text-hive-cyan">{sanitizeDisplay(event.timestamp)}</td>
+                <td className="px-3 py-2">{sanitizeDisplay(event.sensor_id)}</td>
+                <td className="px-3 py-2">{sanitizeDisplay(event.src_ip)}</td>
+                <td className="px-3 py-2">{event.dst_port}</td>
+                <td className="px-3 py-2" style={{ color: severityColor(event.severity) }}>
                   {sanitizeDisplay(event.protocol)}
                 </td>
-                <td className="px-2 py-1.5 text-hive-muted">{sanitizeDisplay(event.session_id)}</td>
+                <td className="px-3 py-2 text-hive-quiet">{sanitizeDisplay(event.session_id)}</td>
               </tr>
             ))}
           </tbody>

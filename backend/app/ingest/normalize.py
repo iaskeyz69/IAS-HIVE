@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 from app.config import SensorConfig, get_settings
-from app.geo import lookup
+from app.geo import is_private_ip, lookup, near_sensor
 from app.models import EventType, HiveEvent, Severity
 
 
@@ -72,6 +72,14 @@ def build_event(
     extra_id: str = "",
 ) -> HiveEvent:
     geo_lat, geo_lon, geo_cc, geo_asn = lookup(src_ip)
+    lat = src_lat if src_lat is not None else geo_lat
+    lon = src_lon if src_lon is not None else geo_lon
+    country = src_country or geo_cc
+    asn = src_asn or geo_asn
+    if lat is None or lon is None:
+        lat, lon = near_sensor(src_ip, sensor.lat, sensor.lon)
+        if not src_country:
+            country = "LAN" if is_private_ip(src_ip) else country
     return HiveEvent(
         id=event_id(timestamp, sensor.id, src_ip, dst_port, event_type, extra_id, raw[:80]),
         timestamp=parse_ts(timestamp),
@@ -79,10 +87,10 @@ def build_event(
         sensor_lat=sensor.lat,
         sensor_lon=sensor.lon,
         src_ip=src_ip or "",
-        src_lat=src_lat if src_lat is not None else geo_lat,
-        src_lon=src_lon if src_lon is not None else geo_lon,
-        src_country=src_country or geo_cc,
-        src_asn=src_asn or geo_asn,
+        src_lat=lat,
+        src_lon=lon,
+        src_country=country,
+        src_asn=asn,
         dst_port=dst_port,
         protocol=(protocol or "").lower(),
         event_type=event_type,

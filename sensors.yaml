@@ -6,12 +6,12 @@ sensors:
     label: COWRIE-01
     type: cowrie
     log_path: /logs/cowrie-01/cowrie.json
-    lat: 14.5995
-    lon: 120.9842
+    lat: 3.16667
+    lon: 101.7295
 
   - id: opencanary-01
     label: CANARY-01
     type: opencanary
     log_path: /logs/opencanary-01/opencanary.log
-    lat: 14.5547
-    lon: 121.0244
+    lat: 3.16667
+    lon: 101.7295

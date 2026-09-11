@@ -12,13 +12,9 @@ export function HudPanel({
   bodyClassName?: string;
 }) {
   return (
-    <section
-      className={`hud-corners flex min-h-0 flex-col border border-hive-line bg-hive-panel/90 ${className}`}
-    >
-      <span className="c-br" />
-      <span className="c-bl" />
+    <section className={`flex min-h-0 flex-col bg-hive-bg ${className}`}>
       {title ? (
-        <header className="label-hud border-b border-hive-line px-3 py-2 text-hive-gold">{title}</header>
+        <header className="border-b border-hive-line px-4 py-3 font-serif text-lg text-hive-paper">{title}</header>
       ) : null}
       <div className={`min-h-0 flex-1 ${bodyClassName}`}>{children}</div>
     </section>

@@ -43,19 +43,21 @@ export function TimelineScrubber({
   }
 
   return (
-    <div className="flex h-16 shrink-0 items-center gap-3 border-t border-hive-line bg-hive-panel px-3">
-      <div>
-        <p className="label-hud">VOLUME / 60M</p>
+    <div data-testid="timeline" className="hive-float flex h-14 items-center gap-4 rounded-card px-4">
+      <div className="w-24 shrink-0">
+        <p className="font-mono text-sm text-hive-ink">Last hour</p>
         <button
           type="button"
-          className="font-mono text-[10px] text-hive-muted hover:text-hive-gold"
+          data-testid="timeline-live"
+          className="text-sm text-hive-quiet hover:text-hive-cyan"
           onClick={() => onChange(null)}
         >
-          {window ? "CLEAR WINDOW" : "LIVE"}
+          {window ? "Clear window" : "Live"}
         </button>
       </div>
       <div
-        className="flex h-10 flex-1 cursor-ew-resize items-end gap-px"
+        data-testid="timeline-bars"
+        className="flex h-8 flex-1 cursor-ew-resize items-end gap-px"
         onMouseDown={(ev) => {
           const i = idxFromEvent(ev);
           drag.current = { start: i, end: i };
@@ -81,12 +83,12 @@ export function TimelineScrubber({
         {buckets.map((bucket, i) => {
           const active =
             selected && i >= Math.min(selected[0], selected[1]) && i <= Math.max(selected[0], selected[1]);
-          const h = Math.max(2, Math.round((bucket.count / max) * 36));
+          const h = Math.max(2, Math.round((bucket.count / max) * 28));
           return (
             <div
               key={bucket.t}
               title={`${bucket.t} · ${bucket.count}`}
-              className={`flex-1 ${active ? "bg-hive-gold" : "bg-hive-gold/30"}`}
+              className={`flex-1 ${active ? "bg-hive-blue" : "bg-hive-blue/30"}`}
               style={{ height: h }}
             />
           );

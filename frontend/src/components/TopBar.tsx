@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 
 function utcStamp(): string {
-  const now = new Date();
-  return now.toISOString().replace(".000Z", "Z").slice(0, 19) + "Z";
+  return new Date().toISOString().replace(".000Z", "Z").slice(0, 19) + "Z";
 }
 
 export function TopBar({
@@ -10,12 +9,14 @@ export function TopBar({
   totalSensors,
   events24h,
   streamUp,
+  coord,
   onLogout,
 }: {
   onlineSensors: number;
   totalSensors: number;
   events24h: number;
   streamUp: boolean;
+  coord?: string | null;
   onLogout: () => void;
 }) {
   const [clock, setClock] = useState(utcStamp);
@@ -26,38 +27,40 @@ export function TopBar({
   }, []);
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-hive-line bg-hive-panel px-4">
-      <div className="flex items-center gap-6">
-        <div>
-          <p className="label-hud text-hive-gold">IAS HIVE</p>
-          <p className="font-sans text-sm tracking-wide text-white">COMMAND CENTER</p>
+    <header
+      data-testid="topbar"
+      className="relative z-50 flex h-12 shrink-0 items-center justify-between border-b border-hive-line bg-hive-bg/95 px-5"
+    >
+      <div className="flex items-center gap-4">
+        <p className="font-mono text-sm font-semibold tracking-[0.28em] text-hive-cyan">HIVE</p>
+        <span
+          className={`font-mono text-[11px] tracking-[0.22em] ${streamUp ? "text-hive-rec pulse-live" : "text-hive-sting"}`}
+        >
+          {streamUp ? "REC" : "OFF"}
+        </span>
+        <div className="flex items-center gap-2 text-sm">
+          <span className={`h-2 w-2 rounded-full ${streamUp ? "bg-hive-rec pulse-live" : "bg-hive-sting"}`} />
+          <span data-testid="stream-status" className={streamUp ? "text-hive-ink" : "text-hive-sting"}>
+            {streamUp ? "Live" : "Degraded"}
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`h-2 w-2 rounded-full ${streamUp ? "bg-hive-live pulse-live" : "bg-hive-threat"}`} />
-          <span className="label-hud text-white">{streamUp ? "ONLINE" : "DEGRADED"}</span>
-        </div>
+        {coord ? <span className="hidden font-mono text-xs text-hive-quiet md:inline">{coord}</span> : null}
       </div>
-      <div className="flex items-center gap-8 font-mono text-xs">
-        <Stat label="UTC" value={clock} />
-        <Stat label="SENSORS" value={`${onlineSensors}/${totalSensors}`} />
-        <Stat label="24H EVENTS" value={String(events24h)} />
+      <div className="flex items-center gap-5 font-mono text-xs text-hive-quiet">
+        <span data-testid="clock">{clock}</span>
+        <span data-testid="sensor-count">
+          {onlineSensors}/{totalSensors} sensors
+        </span>
+        <span data-testid="event-count">{events24h} events</span>
         <button
           type="button"
+          data-testid="sign-out"
           onClick={onLogout}
-          className="label-hud text-hive-muted hover:text-hive-gold"
+          className="text-hive-ink hover:text-hive-cyan"
         >
-          LOCK
+          Sign out
         </button>
       </div>
     </header>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="label-hud">{label}</p>
-      <p className="text-hive-gold">{value}</p>
-    </div>
   );
 }

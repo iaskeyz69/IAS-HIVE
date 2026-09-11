@@ -11,16 +11,17 @@ export function SensorList({
   onSelect: (id: string | null) => void;
 }) {
   return (
-    <ul className="space-y-1 p-2">
+    <ul data-testid="sensor-list" className="mt-2">
       <li>
         <button
           type="button"
+          data-testid="sensor-all"
           onClick={() => onSelect(null)}
-          className={`flex w-full items-center justify-between px-2 py-1.5 text-left font-mono text-xs ${
-            selectedId === null ? "bg-hive-gold/15 text-hive-gold" : "text-hive-muted hover:text-white"
+          className={`flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-sm ${
+            selectedId === null ? "bg-hive-bg text-hive-cyan" : "text-hive-quiet hover:text-hive-ink"
           }`}
         >
-          <span>ALL SENSORS</span>
+          <span>All sensors</span>
           <span>{sensors.length}</span>
         </button>
       </li>
@@ -28,16 +29,16 @@ export function SensorList({
         <li key={sensor.id}>
           <button
             type="button"
+            data-testid="sensor-row"
+            data-sensor-id={sensor.id}
             onClick={() => onSelect(sensor.id === selectedId ? null : sensor.id)}
-            className={`flex w-full items-center gap-2 px-2 py-1.5 text-left font-mono text-xs ${
-              selectedId === sensor.id ? "bg-hive-gold/15 text-hive-gold" : "hover:bg-white/5"
+            className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm ${
+              selectedId === sensor.id ? "bg-hive-bg text-hive-cyan" : "hover:bg-hive-bg"
             }`}
           >
-            <span
-              className={`h-2 w-2 shrink-0 rounded-full ${sensor.online ? "bg-hive-live" : "bg-hive-threat"}`}
-            />
+            <span className={`h-2 w-2 shrink-0 rounded-full ${sensor.online ? "bg-hive-blue" : "bg-hive-sting"}`} />
             <span className="flex-1 truncate">{sanitizeDisplay(sensor.label)}</span>
-            <span className="text-hive-muted">{sanitizeDisplay(sensor.type)}</span>
+            <span className="text-hive-quiet">{sanitizeDisplay(sensor.type)}</span>
           </button>
         </li>
       ))}

@@ -15,51 +15,55 @@ import {
 import type { ReactNode } from "react";
 import type { StatsPayload } from "../types";
 
-const GOLD = "#38BDF8";
-const MUTED = "#7B8A9E";
-const SLICES = ["#38BDF8", "#FF3B3B", "#3DFF8A", "#0EA5E9", "#0369A1", "#7B8A9E", "#E8E6DF", "#1D4ED8"];
+const BLUE = "#00D4FF";
+const QUIET = "rgba(232, 234, 237, 0.55)";
+const SLICES = ["#00D4FF", "#FF4D4D", "rgba(232,234,237,0.45)", "#E8EAED", "#33FF33", "#FFB800", "#0C0C14", "#66E0FF"];
 
 export function StatsView({ stats }: { stats: StatsPayload | null }) {
   if (!stats) {
-    return <p className="p-6 font-mono text-xs text-hive-muted">LOADING STATS…</p>;
+    return (
+      <p data-testid="stats-loading" className="p-6 pb-20 pt-16 text-sm text-hive-quiet">
+        Loading stats
+      </p>
+    );
   }
 
   return (
-    <div className="absolute inset-0 grid grid-cols-1 gap-3 overflow-auto p-3 lg:grid-cols-2">
-      <ChartCard title="EVENTS OVER TIME">
+    <div data-testid="stats-view" className="absolute inset-0 grid grid-cols-1 gap-3 overflow-auto bg-hive-bg p-4 pb-20 pl-[19.5rem] pr-4 pt-14 lg:grid-cols-2">
+      <ChartCard title="Events over time">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={stats.over_time}>
-            <CartesianGrid stroke="rgba(56,189,248,0.12)" />
-            <XAxis dataKey="t" tick={{ fill: MUTED, fontSize: 9 }} tickFormatter={(v) => String(v).slice(11, 16)} />
-            <YAxis tick={{ fill: MUTED, fontSize: 9 }} />
+            <CartesianGrid stroke="rgba(59,130,246,0.12)" />
+            <XAxis dataKey="t" tick={{ fill: QUIET, fontSize: 11 }} tickFormatter={(v) => String(v).slice(11, 16)} />
+            <YAxis tick={{ fill: QUIET, fontSize: 11 }} />
             <Tooltip contentStyle={tip} />
-            <Line type="monotone" dataKey="count" stroke={GOLD} dot={false} strokeWidth={1.5} />
+            <Line type="monotone" dataKey="count" stroke={BLUE} dot={false} strokeWidth={1.5} />
           </LineChart>
         </ResponsiveContainer>
       </ChartCard>
-      <ChartCard title="TOP COUNTRIES">
+      <ChartCard title="Top countries">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={stats.top_countries} layout="vertical">
-            <CartesianGrid stroke="rgba(56,189,248,0.12)" />
-            <XAxis type="number" tick={{ fill: MUTED, fontSize: 9 }} />
-            <YAxis type="category" dataKey="name" width={40} tick={{ fill: MUTED, fontSize: 10 }} />
+            <CartesianGrid stroke="rgba(59,130,246,0.12)" />
+            <XAxis type="number" tick={{ fill: QUIET, fontSize: 11 }} />
+            <YAxis type="category" dataKey="name" width={48} tick={{ fill: QUIET, fontSize: 11 }} />
             <Tooltip contentStyle={tip} />
-            <Bar dataKey="count" fill={GOLD} />
+            <Bar dataKey="count" fill={BLUE} />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
-      <ChartCard title="TOP PORTS">
+      <ChartCard title="Top ports">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={stats.top_ports.map((p) => ({ name: String(p.port), count: p.count }))}>
-            <CartesianGrid stroke="rgba(56,189,248,0.12)" />
-            <XAxis dataKey="name" tick={{ fill: MUTED, fontSize: 10 }} />
-            <YAxis tick={{ fill: MUTED, fontSize: 9 }} />
+            <CartesianGrid stroke="rgba(59,130,246,0.12)" />
+            <XAxis dataKey="name" tick={{ fill: QUIET, fontSize: 11 }} />
+            <YAxis tick={{ fill: QUIET, fontSize: 11 }} />
             <Tooltip contentStyle={tip} />
-            <Bar dataKey="count" fill="#FF3B3B" />
+            <Bar dataKey="count" fill="#EF4444" />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
-      <ChartCard title="PROTOCOL">
+      <ChartCard title="Protocols">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie data={stats.protocols} dataKey="count" nameKey="name" innerRadius={46} outerRadius={70} paddingAngle={2}>
@@ -75,14 +79,12 @@ export function StatsView({ stats }: { stats: StatsPayload | null }) {
   );
 }
 
-const tip = { background: "#0A1220", border: "1px solid #38BDF8", fontSize: 11, color: "#E8E6DF" };
+const tip = { background: "#0C0C14", border: "1px solid rgba(0,212,255,0.28)", fontSize: 12, color: "#E8EAED" };
 
 function ChartCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="hud-corners flex min-h-[220px] flex-col border border-hive-line bg-hive-panel p-2">
-      <span className="c-br" />
-      <span className="c-bl" />
-      <p className="label-hud mb-1 px-1 text-hive-gold">{title}</p>
+    <div data-testid="stats-card" className="flex min-h-[220px] flex-col rounded-card bg-hive-panel p-3">
+      <p className="mb-2 text-sm font-medium text-hive-ink">{title}</p>
       <div className="min-h-0 flex-1">{children}</div>
     </div>
   );
