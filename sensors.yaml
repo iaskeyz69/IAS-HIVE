@@ -1,0 +1,17 @@
+# Working sensor list. Paths are inside the API container (/logs = ./data/logs).
+# Edit lat/lon to your homelab geo. See sensors.yaml.example and the README.
+
+sensors:
+  - id: cowrie-01
+    label: COWRIE-01
+    type: cowrie
+    log_path: /logs/cowrie-01/cowrie.json
+    lat: 14.5995
+    lon: 120.9842
+
+  - id: opencanary-01
+    label: CANARY-01
+    type: opencanary
+    log_path: /logs/opencanary-01/opencanary.log
+    lat: 14.5547
+    lon: 121.0244

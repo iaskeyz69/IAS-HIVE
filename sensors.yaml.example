@@ -1,0 +1,19 @@
+# Copy to sensors.yaml and point log_path at your mounted VLAN 7 logs.
+# Paths are as seen inside the API container (/logs is ./data/logs on the host).
+#
+# lat/lon = sensor (homelab) location, not the attacker.
+
+sensors:
+  - id: cowrie-01
+    label: COWRIE-01
+    type: cowrie
+    log_path: /logs/cowrie-01/cowrie.json
+    lat: 14.5995
+    lon: 120.9842
+
+  - id: opencanary-01
+    label: CANARY-01
+    type: opencanary
+    log_path: /logs/opencanary-01/opencanary.log
+    lat: 14.5547
+    lon: 121.0244
