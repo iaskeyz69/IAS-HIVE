@@ -1,5 +1,5 @@
 # Management-plane only. Do not attach this stack to a VLAN 7 / bait bridge.
-# Dashboard binds loopback and the LAN mgmt NIC (10.0.10.4) — never 0.0.0.0.
+# Dashboard binds loopback and mgmt NICs (10.0.10.4, 10.0.20.3) — never 0.0.0.0.
 # Bait listeners live in docker-compose.sensors.yml, not this file.
 
 services:
@@ -40,6 +40,7 @@ services:
     ports:
       - "127.0.0.1:8443:80"
       - "10.0.10.4:8443:80"
+      - "10.0.20.3:8443:80"
     networks:
       - hive_mgmt
     restart: unless-stopped

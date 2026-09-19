@@ -19,7 +19,8 @@ VLAN / LAN bait                         Management host
 Cowrie :2222  ─┐
 OpenCanary    ─┴─ JSON logs ──► ./data/logs ──► hive-api + hive-ui
   21/23/3306/6379/8080                         127.0.0.1:8443
-                                               10.0.10.4:8443   ← operator LAN
+                                               10.0.10.4:8443   ← Wi-Fi LAN
+                                               10.0.20.3:8443   ← enx68e43b309f1c
 ```
 
 - Do **not** attach `hive_mgmt` to a bait bridge.
@@ -50,7 +51,7 @@ Edit `.env` before the first build:
 | `DOCKER_GID` | Host `docker` group GID (`getent group docker`). Needed for Config → Apply. |
 | `VITE_MAPBOX_TOKEN` | Public Mapbox `pk.` token in **this root `.env`** so `docker compose build` bakes it into the UI. |
 
-URL-restrict the Mapbox token to `http://127.0.0.1:8443` and `http://10.0.10.4:8443` (plus `http://localhost:5173` for Vite).
+URL-restrict the Mapbox token to `http://127.0.0.1:8443`, `http://10.0.10.4:8443`, and `http://10.0.20.3:8443` (plus `http://localhost:5173` for Vite).
 
 ```bash
 # Dashboard
@@ -60,8 +61,22 @@ docker compose up -d --build
 docker compose -f docker-compose.sensors.yml up -d
 ```
 
-Open **http://10.0.10.4:8443** on the LAN, or **http://127.0.0.1:8443** locally.
+Open **http://10.0.20.3:8443** or **http://10.0.10.4:8443** on the LAN, or **http://127.0.0.1:8443** locally.
 Sign in with `HIVE_USER` / `HIVE_PASSWORD`. Hard-refresh after a UI rebuild.
+
+### Dashboard bind
+
+`hive-ui` publishes `:8443` on specific addresses only — never `0.0.0.0`.
+
+| Address | Interface | Who can open it |
+|---|---|---|
+| `127.0.0.1:8443` | loopback | This host |
+| `10.0.10.4:8443` | `wlp58s0` | `10.0.10.0/24` (UFW) |
+| `10.0.20.3:8443` | `enx68e43b309f1c` | `10.0.20.0/24` (UFW) |
+
+Bait listeners stay on `10.0.10.4`. Adding another mgmt NIC means a compose
+`ports:` line, a UFW allow from that subnet to `8443/tcp`, the CORS origin in
+`backend/app/main.py`, and the same URL on the Mapbox token restriction.
 
 ```bash
 docker compose ps
@@ -165,8 +180,8 @@ Vite proxies `/api` and `/ws` to `127.0.0.1:8000`. Config → Apply still needs
 a Docker socket the API user can open.
 
 Live HUD tests (Playwright) live in `e2e/`. They need `HIVE_USER`,
-`HIVE_PASSWORD`, and a running dashboard (`HIVE_BASE_URL` defaults to
-`http://10.0.10.4:8443`).
+`HIVE_PASSWORD`, and a running dashboard. `HIVE_BASE_URL` defaults to
+`http://10.0.10.4:8443`; use `http://10.0.20.3:8443` if you test from that NIC.
 
 ## API (all REST routes require HTTP Basic)
 
@@ -196,8 +211,8 @@ the same Basic credential as a `token` query parameter.
   Raw lines are length-capped on ingest.
 - HTTP Basic is required on every REST call, including `/api/health`.
 - Change `HIVE_PASSWORD`. The API refuses to start if user or password is unset.
-- Keep the dashboard off the public internet. `10.0.10.4:8443` is the LAN mgmt
-  NIC only. Do not forward 8443 from a WAN router.
+- Keep the dashboard off the public internet. `:8443` is bound to loopback,
+  `10.0.10.4`, and `10.0.20.3` only. Do not forward 8443 from a WAN router.
 - `/var/run/docker.sock` in `hive-api` is a privilege boundary. The API only
   start/stops `hive-cowrie` and restarts `hive-opencanary`. A compromised API
   process can still reach the Docker Engine — restrict who can reach `:8443`.
