@@ -3,13 +3,25 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.auth import require_basic
 from app.config import SensorBook, get_settings
-from app.db import events_since_count, last_event_for_sensor, list_events, stats, timeline
+from app.db import events_since_count, last_events_for_sensors, list_events, stats, timeline
 from app.geo import geoip_available
-from app.models import EventFilters, EventList, HealthPayload, SensorStatus, StatsPayload, TimelineBucket
+from app.bait import BIND, apply_services, current_services, save_services
+from app.models import (
+    BaitApplyResult,
+    BaitPayload,
+    BaitService,
+    BaitUpdate,
+    EventFilters,
+    EventList,
+    HealthPayload,
+    SensorStatus,
+    StatsPayload,
+    TimelineBucket,
+)
 
 
 def build_router(book: SensorBook) -> APIRouter:
@@ -29,9 +41,10 @@ def build_router(book: SensorBook) -> APIRouter:
     async def sensors() -> list[SensorStatus]:
         settings = get_settings()
         cutoff = datetime.now(timezone.utc) - timedelta(minutes=settings.sensor_online_minutes)
+        last_by_id = await last_events_for_sensors([sensor.id for sensor in book.sensors])
         out: list[SensorStatus] = []
         for sensor in book.sensors:
-            last = await last_event_for_sensor(sensor.id)
+            last = last_by_id.get(sensor.id)
             path = Path(sensor.log_path)
             mtime_ok = False
             if path.exists():
@@ -105,5 +118,30 @@ def build_router(book: SensorBook) -> APIRouter:
             "events_24h": await events_since_count(since),
             "sensors": len(book.sensors),
         }
+
+    @api.get("/bait", response_model=BaitPayload)
+    async def bait_get() -> BaitPayload:
+        return BaitPayload(bind=BIND, services=[BaitService.model_validate(row) for row in current_services()])
+
+    @api.put("/bait", response_model=BaitPayload)
+    async def bait_put(body: BaitUpdate) -> BaitPayload:
+        try:
+            rows = save_services(body.services)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except (RuntimeError, OSError) as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return BaitPayload(bind=BIND, services=[BaitService.model_validate(row) for row in rows])
+
+    @api.post("/bait/apply", response_model=BaitApplyResult)
+    async def bait_apply() -> BaitApplyResult:
+        result = apply_services()
+        return BaitApplyResult(
+            ok=result["ok"],
+            error=result["error"],
+            actions=result["actions"],
+            services=[BaitService.model_validate(row) for row in result["services"]],
+            bind=BIND,
+        )
 
     return api

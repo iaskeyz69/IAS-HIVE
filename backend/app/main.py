@@ -55,12 +55,13 @@ def create_app() -> FastAPI:
         "http://localhost:8443",
         "http://127.0.0.1:5173",
         "http://localhost:5173",
+        "http://10.0.10.4:8443",
     }
     app.add_middleware(
         CORSMiddleware,
         allow_origins=sorted(origins),
         allow_credentials=True,
-        allow_methods=["GET"],
+        allow_methods=["GET", "PUT", "POST", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type"],
     )
     app.include_router(build_router(book), prefix="/api")

@@ -1,6 +1,6 @@
 export type Severity = "low" | "medium" | "high";
 export type EventType = "scan" | "login_attempt" | "payload" | "command";
-export type ViewId = "map2d" | "map3d" | "table" | "stats";
+export type ViewId = "map2d" | "map3d" | "table" | "stats" | "config";
 export type BasemapId = "satellite" | "normal";
 
 export interface HiveEvent {
@@ -53,4 +53,26 @@ export interface TimeWindow {
 
 export interface LiveArc extends HiveEvent {
   bornAt: number;
+}
+
+export interface BaitService {
+  id: string;
+  label: string;
+  port: number;
+  sensor: string;
+  enabled: boolean;
+  running: boolean | null;
+}
+
+export interface BaitPayload {
+  bind: string;
+  services: BaitService[];
+}
+
+export interface BaitApplyResult {
+  ok: boolean;
+  error: string | null;
+  actions: string[];
+  services: BaitService[];
+  bind: string;
 }

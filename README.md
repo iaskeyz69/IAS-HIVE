@@ -1,36 +1,36 @@
 # IAS Hive — Honeypot Command Center
 
-Self-hosted dashboard for Cowrie and OpenCanary telemetry. Sensors stay on
-VLAN 7. This stack only tails their log files, normalizes events, and draws
-them on a dark command-center HUD. It does not run honeypot daemons or
-publish bait ports.
+Self-hosted dashboard for Cowrie and OpenCanary telemetry. The management
+stack tails sensor JSON logs, normalizes events, and draws them on a dark HUD.
+Bait listeners are a **separate** compose project (`docker-compose.sensors.yml`).
+Hive does not invent new listen ports; Config only toggles that fixed catalog.
 
 ## What you get
 
 - FastAPI backend: JSONL tailers, MaxMind GeoLite2 (offline), SQLite, REST, WebSocket
-- React HUD: Mapbox 2D / pitched 3D, table, stats, live feed, timeline scrubber
-- `docker-compose` on an **internal** management network; UI bound to `127.0.0.1:8443`
+- React HUD: Mapbox globe / 2D, table, stats, live feed, timeline, **Config**
+- Management compose on `hive_mgmt`; bait compose on `hive_bait`
+- Event retention **30 days** (`HIVE_RETENTION_DAYS`)
 
 ## Network model
 
 ```
-VLAN 7 (bait)          Management host              Operator
-Cowrie / OpenCanary --> NFS/SMB/rsync logs --> hive-api + hive-ui
-                                               127.0.0.1:8443  <-- SSH tunnel / VPN
+VLAN / LAN bait                         Management host
+Cowrie :2222  ─┐
+OpenCanary    ─┴─ JSON logs ──► ./data/logs ──► hive-api + hive-ui
+  21/23/3306/6379/8080                         127.0.0.1:8443
+                                               10.0.10.4:8443   ← operator LAN
 ```
 
-- Do **not** attach `hive_mgmt` to a VLAN 7 / bait bridge.
-- Do **not** publish `8443` on `0.0.0.0`. Compose binds loopback only.
-- The compose network is `internal: true` so the API/UI have no default route
-  to the internet. GeoIP is a local `.mmdb` file.
+- Do **not** attach `hive_mgmt` to a bait bridge.
+- Do **not** publish `8443` on `0.0.0.0` or the public internet.
+- Real SSH stays on the host (never bait port 22). Cowrie is host `10.0.10.4:2222`.
+- Mapbox tiles load in the **operator browser**. The API container does not need a default route for GeoIP (local `.mmdb`).
 
 ## After git clone (Docker)
 
 This folder must already be a committed git repo with a remote before anyone
 else can `git clone` it. Never commit `.env`.
-
-On the management host you need Docker Compose. The **operator browser** needs
-internet for Mapbox tiles (the API container does not).
 
 ```bash
 git clone <your-repo-url> ias-hive
@@ -43,65 +43,91 @@ Edit `.env` before the first build:
 
 | Variable | What to set |
 |---|---|
-| `HIVE_USER` / `HIVE_PASSWORD` | Dashboard login. The API will not start if these are empty. Change the example password. |
-| `HIVE_DEMO` | `1` for the first run (synthetic TEST-NET events, no sensor logs required). |
-| `VITE_MAPBOX_TOKEN` | Your public Mapbox `pk.` token. Must be in **this root `.env`** so `docker compose build` bakes it into the UI. If it is missing, the map shows `SET VITE_MAPBOX_TOKEN`. |
+| `HIVE_USER` / `HIVE_PASSWORD` | Dashboard login. The API will not start if these are empty. Use a long unique password. |
+| `HIVE_DEMO` | `1` for the first run (synthetic events, no sensor logs required). `0` in production. |
+| `HIVE_RETENTION_DAYS` | How long hits stay in SQLite. Default `30`. |
+| `HIVE_SENSOR_ONLINE_MINUTES` | Rail "online" window. Default `5`. This is **log freshness**, not "container is up". |
+| `DOCKER_GID` | Host `docker` group GID (`getent group docker`). Needed for Config → Apply. |
+| `VITE_MAPBOX_TOKEN` | Public Mapbox `pk.` token in **this root `.env`** so `docker compose build` bakes it into the UI. |
 
-URL-restrict the Mapbox token to `http://127.0.0.1:8443` (and `http://localhost:5173` if you also run Vite).
+URL-restrict the Mapbox token to `http://127.0.0.1:8443` and `http://10.0.10.4:8443` (plus `http://localhost:5173` for Vite).
 
 ```bash
+# Dashboard
 docker compose up -d --build
+
+# Bait sensors (same host, separate project)
+docker compose -f docker-compose.sensors.yml up -d
 ```
 
-Open **http://127.0.0.1:8443** and sign in with `HIVE_USER` / `HIVE_PASSWORD`.
+Open **http://10.0.10.4:8443** on the LAN, or **http://127.0.0.1:8443** locally.
+Sign in with `HIVE_USER` / `HIVE_PASSWORD`. Hard-refresh after a UI rebuild.
 
 ```bash
 docker compose ps
 docker compose logs -f api
+docker compose -f docker-compose.sensors.yml ps
 ```
 
-Rebuild the UI whenever you change `VITE_MAPBOX_TOKEN` (`docker compose up -d --build` again). Stop with `docker compose down`.
+Rebuild the UI whenever you change `VITE_MAPBOX_TOKEN`. Stop the dashboard with
+`docker compose down`. That does **not** stop Cowrie/OpenCanary.
 
-If Docker Desktop never publishes `8443`, remove `internal: true` from the `hive_mgmt` network in `docker-compose.yml` and keep the `127.0.0.1:8443` bind.
-
-Remote operator (dashboard stays on loopback):
+Remote operator (if you drop the LAN bind and keep loopback only):
 
 ```bash
 ssh -L 8443:127.0.0.1:8443 user@mgmt-host
 ```
 
-For local Vite (no Docker), also copy `frontend/.env.example` → `frontend/.env` and set the same `VITE_MAPBOX_TOKEN`.
+For local Vite (no Docker), also copy `frontend/.env.example` → `frontend/.env`.
+
+## Config (bait toggles)
+
+**Config** on the HUD enables or disables the existing catalog only. You cannot
+type a new port or bind IP.
+
+| Id | Sensor | Host port |
+|---|---|---|
+| `cowrie-ssh` | Cowrie | `10.0.10.4:2222` |
+| `ftp` | OpenCanary | 21 |
+| `telnet` | OpenCanary | 23 |
+| `mysql` | OpenCanary | 3306 |
+| `redis` | OpenCanary | 6379 |
+| `http` | OpenCanary | 8080 |
+
+SSH/80/443/RDP and other OpenCanary modules stay off. UFW is not edited.
+
+1. Toggle services.
+2. **Save** writes `sensors/opencanary.conf` (`*.enabled` only) and `/data/bait.json` (Cowrie flag).
+3. **Apply** talks to Docker over `/var/run/docker.sock`: start/stop `hive-cowrie`, restart `hive-opencanary` so it reloads the bind-mounted conf.
+
+Save still persists files if the socket is missing; Apply then returns a clear error.
+
+A sensor can be **listening** on Config and still show **red** on the rail when
+nobody has hit it for `HIVE_SENSOR_ONLINE_MINUTES`. Cowrie only appends
+`cowrie.json` on SSH sessions, not on process start. OpenCanary logs
+`Canary running!!!` on restart, so it often looks online after Apply.
 
 ## Point it at VLAN 7 sensors
 
-1. On the management host, mount or rsync each sensor JSON log under `./data/logs/<sensor_id>/`.
-   Typical sources:
+If sensors run on another host, mount or rsync JSONL under `./data/logs/<sensor_id>/`.
 
-   | Sensor     | File on the sensor host                         | Mount here                         |
-   |------------|--------------------------------------------------|------------------------------------|
-   | Cowrie     | `/var/log/cowrie/cowrie.json`                    | `./data/logs/cowrie-01/cowrie.json` |
-   | OpenCanary | configured JSON logger (often `/var/tmp/opencanary.log`) | `./data/logs/opencanary-01/opencanary.log` |
+| Sensor     | File on the sensor host                         | Mount here                         |
+|------------|--------------------------------------------------|------------------------------------|
+| Cowrie     | `/var/log/cowrie/cowrie.json`                    | `./data/logs/cowrie-01/cowrie.json` |
+| OpenCanary | configured JSON logger (often `/var/tmp/opencanary/opencanary.log`) | `./data/logs/opencanary-01/opencanary.log` |
 
-2. Copy `sensors.yaml.example` → `sensors.yaml` (already present as a starter).
-   Set `id`, `type` (`cowrie` or `opencanary`), `log_path` **as seen inside the
-   API container** (`/logs/...` = `./data/logs/...` on the host), and `lat`/`lon`
-   for the sensor (your homelab geo, not the attacker).
+On this host the sensor compose already bind-mounts those paths.
 
-3. Drop MaxMind databases into `./data/geoip/`:
-
+1. Copy `sensors.yaml.example` → `sensors.yaml` if you need a fresh list.
+   `log_path` is as seen **inside hive-api** (`/logs/...` = `./data/logs/...`).
+   `lat`/`lon` are the sensor (homelab), not the attacker.
+2. Drop MaxMind databases into `./data/geoip/`:
    - `GeoLite2-City.mmdb`
    - `GeoLite2-ASN.mmdb`
+   Sign up at [MaxMind](https://www.maxmind.com/en/geolite2/signup). They are not vendored.
+3. Set `HIVE_DEMO=0` once real logs are flowing.
 
-   Sign up at [MaxMind](https://www.maxmind.com/en/geolite2/signup), generate a
-   license key, and download the editions yourself. They are not vendored.
-
-4. Set `HIVE_DEMO=0` in `.env` once real logs are flowing. Without GeoLite2,
-   table/stats still work; attacker lat/lon stay empty.
-
-5. `docker compose up -d`
-
-Dionaea and T-Pot Elasticsearch ingest are not in this version. Add a collector
-that writes Cowrie/OpenCanary-compatible JSONL, or extend `backend/app/ingest/`.
+Dionaea and T-Pot Elasticsearch ingest are not in this version.
 
 ## Local development (no Docker)
 
@@ -111,18 +137,18 @@ container paths):
 ```bash
 cd backend
 python -m venv .venv
-.venv\Scripts\activate          # Windows
-# source .venv/bin/activate     # Linux
+source .venv/bin/activate
 pip install -r requirements.txt
 
-set HIVE_USER=operator
-set HIVE_PASSWORD=change-me-now
-set HIVE_DEMO=1
-set HIVE_DB_PATH=../data/db/hive.sqlite
-set HIVE_SENSORS_FILE=../sensors.yaml
-set HIVE_GEOIP_CITY=../data/geoip/GeoLite2-City.mmdb
-set HIVE_GEOIP_ASN=../data/geoip/GeoLite2-ASN.mmdb
-# On Linux/macOS use export instead of set
+export HIVE_USER=operator
+export HIVE_PASSWORD=change-me-now
+export HIVE_DEMO=1
+export HIVE_DB_PATH=../data/db/hive.sqlite
+export HIVE_SENSORS_FILE=../sensors.yaml
+export HIVE_GEOIP_CITY=../data/geoip/GeoLite2-City.mmdb
+export HIVE_GEOIP_ASN=../data/geoip/GeoLite2-ASN.mmdb
+export HIVE_OPENCANARY_CONF=../sensors/opencanary.conf
+export HIVE_BAIT_STATE_PATH=../data/db/bait.json
 
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
@@ -135,9 +161,14 @@ npm install
 npm run dev
 ```
 
-Vite proxies `/api` and `/ws` to `127.0.0.1:8000`.
+Vite proxies `/api` and `/ws` to `127.0.0.1:8000`. Config → Apply still needs
+a Docker socket the API user can open.
 
-## API (all routes require HTTP Basic)
+Live HUD tests (Playwright) live in `e2e/`. They need `HIVE_USER`,
+`HIVE_PASSWORD`, and a running dashboard (`HIVE_BASE_URL` defaults to
+`http://10.0.10.4:8443`).
+
+## API (all REST routes require HTTP Basic)
 
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -147,7 +178,13 @@ Vite proxies `/api` and `/ws` to `127.0.0.1:8000`.
 | GET | `/api/stats` | Countries, ports, time series, protocols |
 | GET | `/api/timeline?hours=1` | Minute buckets for the scrubber |
 | GET | `/api/summary` | 24h count |
+| GET | `/api/bait` | Allowlisted bait toggles + running state |
+| PUT | `/api/bait` | Persist allowlisted `enabled` flags only |
+| POST | `/api/bait/apply` | start/stop/restart the two sensor containers |
 | WS | `/ws/events?token=<base64 user:pass>` | Live normalized events |
+
+`PUT /api/bait` body: `{ "services": { "cowrie-ssh": true, "ftp": false, ... } }`.
+Unknown ids return `400`. Ports and bind IPs are not writable.
 
 Browsers cannot set an `Authorization` header on `WebSocket`, so the UI sends
 the same Basic credential as a `token` query parameter.
@@ -159,18 +196,27 @@ the same Basic credential as a `token` query parameter.
   Raw lines are length-capped on ingest.
 - HTTP Basic is required on every REST call, including `/api/health`.
 - Change `HIVE_PASSWORD`. The API refuses to start if user or password is unset.
-- Keep the dashboard off the bait segment. Bait listeners and this UI must not
-  share a reachable LAN path from the internet.
+- Keep the dashboard off the public internet. `10.0.10.4:8443` is the LAN mgmt
+  NIC only. Do not forward 8443 from a WAN router.
+- `/var/run/docker.sock` in `hive-api` is a privilege boundary. The API only
+  start/stops `hive-cowrie` and restarts `hive-opencanary`. A compromised API
+  process can still reach the Docker Engine — restrict who can reach `:8443`.
 - GeoLite2 is local so attacker IPs are not sent to a third-party API.
-- No honeypot containers and no bait ports are defined in this compose file.
+- Nginx sends `X-Frame-Options`, `nosniff`, and a strict referrer policy.
+- Credentials stay in `sessionStorage` (tab lifetime), not `localStorage`.
 
 ## Layout
 
 ```
-backend/     FastAPI, tailers, GeoIP, SQLite
-frontend/    React + Vite + Tailwind + Mapbox GL
-nginx/       SPA + /api + /ws reverse proxy
-data/logs/   bind-mount target for VLAN 7 JSONL
-data/geoip/  GeoLite2-City.mmdb + GeoLite2-ASN.mmdb
-data/db/     hive.sqlite
+backend/                      FastAPI, tailers, GeoIP, SQLite, bait apply
+frontend/                     React + Vite + Tailwind + Mapbox GL
+nginx/                        SPA + /api + /ws reverse proxy
+docker-compose.yml            hive-api + hive-ui
+docker-compose.sensors.yml    hive-cowrie + hive-opencanary
+sensors.yaml                  sensor book (ids, log paths, geo)
+sensors/opencanary.conf       OpenCanary modules (enabled flags only from Config)
+data/logs/                    bind-mount target for sensor JSONL
+data/geoip/                   GeoLite2-City.mmdb + GeoLite2-ASN.mmdb
+data/db/                      hive.sqlite + bait.json
+e2e/                          Playwright against the live HUD
 ```

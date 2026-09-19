@@ -13,6 +13,7 @@ import { clearAuth, loadAuth } from "./lib/auth";
 import type { BasemapId, ViewId } from "./types";
 import { MapboxView } from "./views/MapboxView";
 import { StatsView } from "./views/StatsView";
+import { ConfigView } from "./views/ConfigView";
 import { TableView } from "./views/TableView";
 
 function formatCoord(lat: number | null | undefined, lon: number | null | undefined): string | null {
@@ -79,6 +80,7 @@ export default function App() {
           <TableView events={data.events} selectedId={data.selectedEvent?.id ?? null} onSelect={data.pickEvent} />
         ) : null}
         {view === "stats" ? <StatsView stats={data.stats} /> : null}
+        {view === "config" ? <ConfigView token={token} /> : null}
 
         <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
           {showMap ? <BasemapToggle value={basemap} onChange={setBasemap} /> : null}

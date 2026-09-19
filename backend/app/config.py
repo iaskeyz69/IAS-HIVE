@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     sensor_online_minutes: int = 5
     raw_max_len: int = 4096
     cors_origin: str = "http://127.0.0.1:8443"
+    opencanary_conf: str = "/app/sensors/opencanary.conf"
+    bait_state_path: str = "/data/bait.json"
+    docker_sock: str = "/var/run/docker.sock"
+    cowrie_container: str = "hive-cowrie"
+    opencanary_container: str = "hive-opencanary"
 
 
 class SensorBook(BaseModel):

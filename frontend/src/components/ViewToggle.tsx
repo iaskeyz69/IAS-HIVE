@@ -5,6 +5,7 @@ const VIEWS: { id: ViewId; label: string; testid: string }[] = [
   { id: "map3d", label: "Globe", testid: "view-globe" },
   { id: "table", label: "Table", testid: "view-table" },
   { id: "stats", label: "Stats", testid: "view-stats" },
+  { id: "config", label: "Config", testid: "view-config" },
 ];
 
 export function ViewToggle({ view, onChange }: { view: ViewId; onChange: (id: ViewId) => void }) {

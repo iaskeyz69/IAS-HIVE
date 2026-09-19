@@ -215,14 +215,24 @@ async def list_events(filters: EventFilters) -> tuple[list[HiveEvent], int]:
 
 
 async def last_event_for_sensor(sensor_id: str) -> str | None:
+    found = await last_events_for_sensors([sensor_id])
+    return found.get(sensor_id)
+
+
+async def last_events_for_sensors(sensor_ids: list[str]) -> dict[str, str | None]:
+    result: dict[str, str | None] = {sid: None for sid in sensor_ids}
+    if not sensor_ids:
+        return result
+    placeholders = ",".join("?" for _ in sensor_ids)
     conn = await connect()
     try:
         cur = await conn.execute(
-            "SELECT timestamp FROM events WHERE sensor_id = ? ORDER BY timestamp DESC LIMIT 1",
-            (sensor_id,),
+            f"SELECT sensor_id, MAX(timestamp) AS ts FROM events WHERE sensor_id IN ({placeholders}) GROUP BY sensor_id",
+            sensor_ids,
         )
-        row = await cur.fetchone()
-        return row["timestamp"] if row else None
+        for row in await cur.fetchall():
+            result[row["sensor_id"]] = row["ts"]
+        return result
     finally:
         await conn.close()
 

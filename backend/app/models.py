@@ -85,3 +85,30 @@ class EventFilters(BaseModel):
     offset: int = 0
 
     model_config = {"populate_by_name": True}
+
+
+
+class BaitService(BaseModel):
+    id: str
+    label: str
+    port: int
+    sensor: str
+    enabled: bool
+    running: bool | None = None
+
+
+class BaitPayload(BaseModel):
+    bind: str = "10.0.10.4"
+    services: list[BaitService]
+
+
+class BaitUpdate(BaseModel):
+    services: dict[str, bool]
+
+
+class BaitApplyResult(BaseModel):
+    ok: bool
+    error: str | None = None
+    actions: list[str] = Field(default_factory=list)
+    services: list[BaitService] = Field(default_factory=list)
+    bind: str = "10.0.10.4"

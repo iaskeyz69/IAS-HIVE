@@ -1,5 +1,6 @@
 # Management-plane only. Do not attach this stack to a VLAN 7 / bait bridge.
-# Dashboard is bound to loopback — reach it via SSH tunnel or VPN, never from bait NICs.
+# Dashboard binds loopback and the LAN mgmt NIC (10.0.10.4) — never 0.0.0.0.
+# Bait listeners live in docker-compose.sensors.yml, not this file.
 
 services:
   api:
@@ -14,9 +15,14 @@ services:
       HIVE_SENSORS_FILE: /app/sensors.yaml
     volumes:
       - ./sensors.yaml:/app/sensors.yaml:ro
+      - ./sensors/opencanary.conf:/app/sensors/opencanary.conf
       - ./data/logs:/logs:ro
       - ./data/geoip:/geoip:ro
       - ./data/db:/data
+      # Engine socket is used only to start/stop hive-cowrie and restart hive-opencanary.
+      - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - "${DOCKER_GID:-127}"
     networks:
       - hive_mgmt
     restart: unless-stopped

@@ -1,5 +1,5 @@
 import { authHeader } from "./auth";
-import type { HiveEvent, SensorStatus, StatsPayload, TimelineBucket, TimeWindow } from "../types";
+import type { BaitApplyResult, BaitPayload, HiveEvent, SensorStatus, StatsPayload, TimelineBucket, TimeWindow } from "../types";
 
 export class AuthError extends Error {
   constructor() {
@@ -7,10 +7,21 @@ export class AuthError extends Error {
   }
 }
 
-async function request<T>(token: string, path: string): Promise<T> {
-  const res = await fetch(path, { headers: authHeader(token) });
+async function request<T>(token: string, path: string, init: RequestInit = {}): Promise<T> {
+  const headers: Record<string, string> = { ...(authHeader(token) as Record<string, string>) };
+  if (init.body) headers["Content-Type"] = "application/json";
+  const res = await fetch(path, { ...init, headers: { ...headers, ...(init.headers as Record<string, string> | undefined) } });
   if (res.status === 401) throw new AuthError();
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    let detail = `${res.status} ${res.statusText}`;
+    try {
+      const body = (await res.json()) as { detail?: string };
+      if (body.detail) detail = body.detail;
+    } catch {
+      /* keep status text */
+    }
+    throw new Error(detail);
+  }
   return res.json() as Promise<T>;
 }
 
@@ -68,4 +79,9 @@ export const api = {
     ),
   summary: (token: string) =>
     request<{ events_24h: number; sensors: number }>(token, "/api/summary"),
+  bait: (token: string) => request<BaitPayload>(token, "/api/bait"),
+  saveBait: (token: string, services: Record<string, boolean>) =>
+    request<BaitPayload>(token, "/api/bait", { method: "PUT", body: JSON.stringify({ services }) }),
+  applyBait: (token: string) =>
+    request<BaitApplyResult>(token, "/api/bait/apply", { method: "POST" }),
 };
