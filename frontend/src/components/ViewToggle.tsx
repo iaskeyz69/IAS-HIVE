@@ -9,7 +9,7 @@ const VIEWS: { id: ViewId; label: string; testid: string }[] = [
 
 export function ViewToggle({ view, onChange }: { view: ViewId; onChange: (id: ViewId) => void }) {
   return (
-    <div data-testid="view-toggle" className="hive-float absolute right-3 top-3 z-30 flex overflow-hidden rounded-full">
+    <div data-testid="view-toggle" className="hive-float flex overflow-hidden rounded-full">
       {VIEWS.map((item) => (
         <button
           key={item.id}

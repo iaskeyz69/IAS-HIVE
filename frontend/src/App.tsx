@@ -6,10 +6,11 @@ import { Login } from "./components/Login";
 import { SensorList } from "./components/SensorList";
 import { TimelineScrubber } from "./components/TimelineScrubber";
 import { TopBar } from "./components/TopBar";
+import { BasemapToggle } from "./components/BasemapToggle";
 import { ViewToggle } from "./components/ViewToggle";
 import { useHiveData } from "./hooks/useHiveData";
 import { clearAuth, loadAuth } from "./lib/auth";
-import type { ViewId } from "./types";
+import type { BasemapId, ViewId } from "./types";
 import { MapboxView } from "./views/MapboxView";
 import { StatsView } from "./views/StatsView";
 import { TableView } from "./views/TableView";
@@ -24,6 +25,7 @@ function formatCoord(lat: number | null | undefined, lon: number | null | undefi
 export default function App() {
   const [token, setToken] = useState<string | null>(() => loadAuth());
   const [view, setView] = useState<ViewId>("map3d");
+  const [basemap, setBasemap] = useState<BasemapId>("satellite");
 
   const onAuthFail = useCallback(() => {
     clearAuth();
@@ -64,6 +66,7 @@ export default function App() {
         {showMap ? (
           <MapboxView
             mode={view === "map3d" ? "3d" : "2d"}
+            basemap={basemap}
             sensors={data.sensors}
             arcs={data.arcs}
             events={data.events}
@@ -77,7 +80,10 @@ export default function App() {
         ) : null}
         {view === "stats" ? <StatsView stats={data.stats} /> : null}
 
-        <ViewToggle view={view} onChange={setView} />
+        <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
+          {showMap ? <BasemapToggle value={basemap} onChange={setBasemap} /> : null}
+          <ViewToggle view={view} onChange={setView} />
+        </div>
 
         <aside
           data-testid="left-rail"

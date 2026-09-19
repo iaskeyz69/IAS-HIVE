@@ -1,6 +1,7 @@
 export type Severity = "low" | "medium" | "high";
 export type EventType = "scan" | "login_attempt" | "payload" | "command";
 export type ViewId = "map2d" | "map3d" | "table" | "stats";
+export type BasemapId = "satellite" | "normal";
 
 export interface HiveEvent {
   id: string;
