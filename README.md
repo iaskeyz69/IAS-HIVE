@@ -25,7 +25,7 @@ OpenCanary    ─┴─ JSON logs ──► ./data/logs ──► hive-api + hiv
 
 - Do **not** attach `hive_mgmt` to a bait bridge.
 - Do **not** publish `8443` on `0.0.0.0` or the public internet.
-- Real SSH stays on the host (never bait port 22). Cowrie is host `10.0.10.4:2222`.
+- Real SSH stays on the host (never bait port 22). Cowrie is `10.0.10.4:2222` and `10.0.20.3:2222`.
 - Mapbox tiles load in the **operator browser**. The API container does not need a default route for GeoIP (local `.mmdb`).
 
 ## After git clone (Docker)
@@ -102,14 +102,15 @@ type a new port or bind IP.
 
 | Id | Sensor | Host port |
 |---|---|---|
-| `cowrie-ssh` | Cowrie | `10.0.10.4:2222` |
+| `cowrie-ssh` | Cowrie | `10.0.10.4:2222` and `10.0.20.3:2222` |
 | `ftp` | OpenCanary | 21 |
 | `telnet` | OpenCanary | 23 |
 | `mysql` | OpenCanary | 3306 |
 | `redis` | OpenCanary | 6379 |
 | `http` | OpenCanary | 8080 |
 
-SSH/80/443/RDP and other OpenCanary modules stay off. UFW is not edited.
+SSH/80/443/RDP and other OpenCanary modules stay off. OpenCanary ports stay on `10.0.10.4`.
+UFW allows Cowrie `2222/tcp` from `10.0.10.0/24` and `10.0.20.0/24`.
 
 1. Toggle services.
 2. **Save** writes `sensors/opencanary.conf` (`*.enabled` only) and `/data/bait.json` (Cowrie flag).
@@ -203,6 +204,22 @@ Unknown ids return `400`. Ports and bind IPs are not writable.
 
 Browsers cannot set an `Authorization` header on `WebSocket`, so the UI sends
 the same Basic credential as a `token` query parameter.
+
+## Port forwarding (WAN)
+
+Forward **bait only**. Do not put the dashboard or the real host on the internet.
+
+| Forward | Port | Why |
+|---|---|---|
+| Yes | `2222` | Cowrie SSH honeypot (`10.0.10.4` and `10.0.20.3`) |
+| Optional | `21` `23` `3306` `6379` `8080` | OpenCanary on `10.0.10.4` only |
+| **Never** | `8443` | Hive UI + API. Basic auth is weak if unchanged. The API has the Docker socket. |
+| **Never** | `22` | Real host SSH |
+| **Never** | `80` `443` `3389` | Host services, not bait |
+
+Router NAT should target the bait IPs above, not `0.0.0.0` on the host. UFW
+already limits `:8443` to `10.0.10.0/24` and `10.0.20.0/24`. Do not add
+`8443` from Anywhere.
 
 ## Security
 

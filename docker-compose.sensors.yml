@@ -10,6 +10,7 @@ services:
     restart: unless-stopped
     ports:
       - "10.0.10.4:2222:2222"
+      - "10.0.20.3:2222:2222"
     volumes:
       - ./data/logs/cowrie-01:/cowrie/cowrie-git/var/log/cowrie
     networks:
