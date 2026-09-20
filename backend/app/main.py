@@ -55,7 +55,6 @@ def create_app() -> FastAPI:
         "http://localhost:8443",
         "http://127.0.0.1:5173",
         "http://localhost:5173",
-        "http://10.0.10.4:8443",
         "http://10.0.20.3:8443",
     }
     app.add_middleware(

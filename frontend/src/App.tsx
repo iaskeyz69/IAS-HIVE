@@ -7,6 +7,7 @@ import { SensorList } from "./components/SensorList";
 import { TimelineScrubber } from "./components/TimelineScrubber";
 import { TopBar } from "./components/TopBar";
 import { BasemapToggle } from "./components/BasemapToggle";
+import { TypeFilter } from "./components/TypeFilter";
 import { ViewToggle } from "./components/ViewToggle";
 import { useHiveData } from "./hooks/useHiveData";
 import { clearAuth, loadAuth } from "./lib/auth";
@@ -46,11 +47,10 @@ export default function App() {
   const online = data.sensors.filter((s) => s.online).length;
   const sensorEvents = data.events.filter((e) => e.sensor_id === data.selectedSensor?.id);
   const showMap = view === "map2d" || view === "map3d";
-  const coord =
-    formatCoord(
-      data.selectedEvent?.src_lat ?? data.selectedEvent?.sensor_lat ?? data.selectedSensor?.lat ?? data.sensors[0]?.lat,
-      data.selectedEvent?.src_lon ?? data.selectedEvent?.sensor_lon ?? data.selectedSensor?.lon ?? data.sensors[0]?.lon,
-    );
+  const coord = formatCoord(
+    data.selectedEvent?.src_lat ?? data.selectedEvent?.sensor_lat ?? data.selectedSensor?.lat ?? data.sensors[0]?.lat,
+    data.selectedEvent?.src_lon ?? data.selectedEvent?.sensor_lon ?? data.selectedSensor?.lon ?? data.sensors[0]?.lon,
+  );
 
   return (
     <div className="relative flex h-full flex-col bg-hive-bg text-hive-ink">
@@ -77,9 +77,23 @@ export default function App() {
           />
         ) : null}
         {view === "table" ? (
-          <TableView events={data.events} selectedId={data.selectedEvent?.id ?? null} onSelect={data.pickEvent} />
+          <TableView
+            events={data.events}
+            typeCounts={data.typeCounts}
+            eventType={data.eventType}
+            onEventType={data.setEventType}
+            selectedId={data.selectedEvent?.id ?? null}
+            onSelect={data.pickEvent}
+          />
         ) : null}
-        {view === "stats" ? <StatsView stats={data.stats} /> : null}
+        {view === "stats" ? (
+          <StatsView
+            stats={data.stats}
+            typeCounts={data.typeCounts}
+            eventType={data.eventType}
+            onEventType={data.setEventType}
+          />
+        ) : null}
         {view === "config" ? <ConfigView token={token} /> : null}
 
         <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
@@ -106,6 +120,12 @@ export default function App() {
               </span>
             </div>
           </section>
+          {showMap ? (
+            <section className="hive-float rounded-card p-3">
+              <p className="mb-2 font-mono text-[11px] tracking-wide text-hive-quiet">Kill chain</p>
+              <TypeFilter value={data.eventType} counts={data.typeCounts} onChange={data.setEventType} />
+            </section>
+          ) : null}
           <section data-testid="sensor-rail" className="hive-float rounded-card p-3">
             <p className="font-mono text-[11px] tracking-wide text-hive-quiet">Sensors</p>
             <SensorList

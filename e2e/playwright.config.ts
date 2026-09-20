@@ -10,7 +10,7 @@ export default defineConfig({
   expect: { timeout: 12_000 },
   reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
   use: {
-    baseURL: process.env.HIVE_BASE_URL ?? "http://10.0.10.4:8443",
+    baseURL: process.env.HIVE_BASE_URL ?? "http://10.0.20.3:8443",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "off",

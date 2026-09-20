@@ -38,12 +38,36 @@ export interface TimelineBucket {
   count: number;
 }
 
+export interface TypeTimeBucket {
+  t: string;
+  scan: number;
+  login_attempt: number;
+  command: number;
+  payload: number;
+}
+
+export interface HitSnippet {
+  timestamp: string;
+  src_ip: string;
+  text: string;
+}
+
 export interface StatsPayload {
   events_24h: number;
+  unique_ips: number;
+  by_type: { name: string; count: number }[];
+  login_success: number;
+  login_fail: number;
+  lan_count: number;
+  internet_count: number;
   top_countries: { name: string; count: number }[];
   top_ports: { port: number; count: number }[];
   over_time: TimelineBucket[];
+  over_time_by_type: TypeTimeBucket[];
   protocols: { name: string; count: number }[];
+  top_ips: { name: string; count: number }[];
+  recent_commands: HitSnippet[];
+  recent_payloads: HitSnippet[];
 }
 
 export interface TimeWindow {

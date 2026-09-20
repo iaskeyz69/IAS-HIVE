@@ -10,11 +10,13 @@ from app.config import get_settings
 from app.geo import is_private_ip, near_sensor
 from app.models import (
     EventFilters,
+    HitSnippet,
     HiveEvent,
     NamedCount,
     PortCount,
     StatsPayload,
     TimelineBucket,
+    TypeTimeBucket,
 )
 
 _CREATE = """
@@ -40,6 +42,7 @@ CREATE INDEX IF NOT EXISTS idx_events_ts ON events(timestamp);
 CREATE INDEX IF NOT EXISTS idx_events_sensor ON events(sensor_id);
 CREATE INDEX IF NOT EXISTS idx_events_src ON events(src_ip);
 CREATE INDEX IF NOT EXISTS idx_events_proto ON events(protocol);
+CREATE INDEX IF NOT EXISTS idx_events_type ON events(event_type);
 
 CREATE TABLE IF NOT EXISTS tail_state (
     log_path TEXT PRIMARY KEY,
@@ -176,6 +179,9 @@ def _filter_sql(filters: EventFilters) -> tuple[str, list]:
     if filters.severity:
         clauses.append("severity = ?")
         params.append(filters.severity)
+    if filters.event_type:
+        clauses.append("event_type = ?")
+        params.append(filters.event_type)
     if filters.time_from:
         clauses.append("timestamp >= ?")
         params.append(filters.time_from)
@@ -291,13 +297,38 @@ async def timeline(hours: int = 1, sensor_id: str | None = None) -> list[Timelin
     return buckets
 
 
+
+def _and_where(where: str, extra: str) -> str:
+    return f"{where} AND {extra}" if where else f"WHERE {extra}"
+
+
+def _snippet_from_raw(raw: str, kind: str) -> str:
+    try:
+        obj = json.loads(raw) if raw else {}
+    except json.JSONDecodeError:
+        return ""
+    if not isinstance(obj, dict):
+        return ""
+    if kind == "command":
+        return str(obj.get("input") or "")[:160]
+    dest = obj.get("destfile") or obj.get("outfile") or ""
+    sha = obj.get("shasum") or ""
+    if dest:
+        return str(dest)[:160]
+    if sha:
+        return f"sha {str(sha)[:16]}"
+    return "file transfer"
+
+
 async def stats(
     time_from: str | None = None,
     time_to: str | None = None,
     sensor_id: str | None = None,
+    event_type: str | None = None,
 ) -> StatsPayload:
     filters = EventFilters(
         sensor_id=sensor_id,
+        event_type=event_type,
         time_from=time_from,
         time_to=time_to,
         limit=1,
@@ -311,11 +342,12 @@ async def stats(
         )
         events_24h = int((await cur.fetchone())["n"])
 
-        async def grouped(column: str, limit: int = 8) -> list[tuple[str, int]]:
+        async def grouped(column: str, limit: int = 8, extra: str = "") -> list[tuple[str, int]]:
+            clause = _and_where(where, extra) if extra else where
             cur_g = await conn.execute(
                 f"""
                 SELECT {column} AS name, COUNT(*) AS n
-                FROM events {where}
+                FROM events {clause}
                 GROUP BY {column}
                 ORDER BY n DESC
                 LIMIT ?
@@ -324,8 +356,29 @@ async def stats(
             )
             return [(row["name"] or "UNK", int(row["n"])) for row in await cur_g.fetchall()]
 
-        countries = await grouped("src_country")
+        async def scalar(sql: str, extra_params: list | None = None) -> int:
+            cur_s = await conn.execute(sql, extra_params if extra_params is not None else params)
+            row = await cur_s.fetchone()
+            return int(row["n"] or 0) if row else 0
+
+        unique_ips = await scalar(f"SELECT COUNT(DISTINCT src_ip) AS n FROM events {where}")
+        lan_where = _and_where(where, "src_country = 'LAN'")
+        net_where = _and_where(where, "src_country != 'LAN'")
+        login_ok_where = _and_where(where, "event_type = 'login_attempt' AND raw LIKE '%login.success%'")
+        login_fail_where = _and_where(
+            where,
+            "event_type = 'login_attempt' AND (raw LIKE '%login.failed%' OR raw LIKE '%login.fail%')",
+        )
+        lan_count = await scalar(f"SELECT COUNT(*) AS n FROM events {lan_where}")
+        internet_count = await scalar(f"SELECT COUNT(*) AS n FROM events {net_where}")
+        login_success = await scalar(f"SELECT COUNT(*) AS n FROM events {login_ok_where}")
+        login_fail = await scalar(f"SELECT COUNT(*) AS n FROM events {login_fail_where}")
+
+        by_type = await grouped("event_type", 8)
+        countries = await grouped("src_country", 8, "src_country != 'LAN'")
         protocols = await grouped("protocol")
+        top_ips = await grouped("src_ip", 8)
+
         cur = await conn.execute(
             f"""
             SELECT dst_port AS port, COUNT(*) AS n
@@ -351,15 +404,78 @@ async def stats(
             TimelineBucket(t=f"{row['bucket']}:00:00Z", count=int(row["n"]))
             for row in await cur.fetchall()
         ]
+
+        cur = await conn.execute(
+            f"""
+            SELECT substr(timestamp, 1, 13) AS bucket, event_type AS kind, COUNT(*) AS n
+            FROM events {where}
+            GROUP BY bucket, event_type
+            ORDER BY bucket
+            """,
+            params,
+        )
+        by_bucket: dict[str, dict[str, int]] = {}
+        for row in await cur.fetchall():
+            bucket = row["bucket"]
+            kind = row["kind"] or "scan"
+            slot = by_bucket.setdefault(
+                bucket, {"scan": 0, "login_attempt": 0, "command": 0, "payload": 0}
+            )
+            if kind in slot:
+                slot[kind] = int(row["n"])
+            else:
+                slot["scan"] += int(row["n"])
+        over_by_type = [
+            TypeTimeBucket(t=f"{bucket}:00:00Z", **counts)
+            for bucket, counts in sorted(by_bucket.items())
+        ]
+
+        async def recent_hits(kind: str) -> list[HitSnippet]:
+            clause = _and_where(where, "event_type = ?")
+            cur_h = await conn.execute(
+                f"""
+                SELECT timestamp, src_ip, raw
+                FROM events {clause}
+                ORDER BY timestamp DESC
+                LIMIT 8
+                """,
+                [*params, kind],
+            )
+            out: list[HitSnippet] = []
+            for row in await cur_h.fetchall():
+                text = _snippet_from_raw(row["raw"] or "", kind)
+                if not text:
+                    continue
+                out.append(
+                    HitSnippet(
+                        timestamp=row["timestamp"] or "",
+                        src_ip=row["src_ip"] or "",
+                        text=text,
+                    )
+                )
+            return out
+
+        recent_commands = await recent_hits("command")
+        recent_payloads = await recent_hits("payload")
     finally:
         await conn.close()
 
     return StatsPayload(
         events_24h=events_24h,
+        unique_ips=unique_ips,
+        by_type=[NamedCount(name=n, count=c) for n, c in by_type],
+        login_success=login_success,
+        login_fail=login_fail,
+        lan_count=lan_count,
+        internet_count=internet_count,
         top_countries=[NamedCount(name=n, count=c) for n, c in countries],
         top_ports=[PortCount(port=p, count=c) for p, c in ports],
         over_time=over,
+        over_time_by_type=over_by_type,
         protocols=[NamedCount(name=n, count=c) for n, c in protocols],
+        top_ips=[NamedCount(name=n, count=c) for n, c in top_ips],
+        recent_commands=recent_commands,
+        recent_payloads=recent_payloads,
     )
 
 

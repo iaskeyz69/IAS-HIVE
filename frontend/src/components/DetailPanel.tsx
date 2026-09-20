@@ -1,4 +1,5 @@
-import { severityColor, severityLabel } from "../lib/colors";
+import { eventTypeColor, eventTypeLabel, severityColor } from "../lib/colors";
+import { eventKind, eventMeta, eventSummary, loginOutcome } from "../lib/eventSummary";
 import { sanitizeDisplay } from "../lib/sanitize";
 import type { HiveEvent, SensorStatus } from "../types";
 
@@ -24,12 +25,7 @@ export function DetailPanel({
     >
       <div className="mb-3 flex items-center justify-between gap-3">
         <p className="font-mono text-sm font-medium tracking-wide text-hive-ink">{event ? "Hit" : "Sensor"}</p>
-        <button
-          type="button"
-          data-testid="detail-close"
-          onClick={onClose}
-          className="text-sm text-hive-quiet hover:text-hive-ink"
-        >
+        <button type="button" data-testid="detail-close" onClick={onClose} className="text-sm text-hive-quiet hover:text-hive-ink">
           Close
         </button>
       </div>
@@ -45,12 +41,8 @@ export function DetailPanel({
           <ul className="mt-3 space-y-1">
             {sensorEvents.slice(0, 12).map((item) => (
               <li key={item.id}>
-                <button
-                  type="button"
-                  onClick={() => onEvent(item)}
-                  className="w-full text-left text-sm text-hive-quiet hover:text-hive-ink"
-                >
-                  {item.timestamp.slice(11, 19)} {sanitizeDisplay(item.src_ip)} {sanitizeDisplay(item.protocol)}
+                <button type="button" onClick={() => onEvent(item)} className="w-full text-left text-sm text-hive-quiet hover:text-hive-ink">
+                  {item.timestamp.slice(11, 19)} {sanitizeDisplay(item.src_ip)} {eventSummary(item)}
                 </button>
               </li>
             ))}
@@ -62,27 +54,46 @@ export function DetailPanel({
 }
 
 function EventDetail({ event }: { event: HiveEvent }) {
+  const obj = eventMeta(event);
+  const username = String(obj.username ?? "");
+  const password = String(obj.password ?? "");
+  const input = String(obj.input ?? "");
+  const dest = String(obj.destfile ?? obj.outfile ?? "");
+  const shasum = String(obj.shasum ?? "");
+  const outcome = loginOutcome(event);
+  const kind = eventKind(event);
   const rows: [string, string][] = [
     ["IP", sanitizeDisplay(event.src_ip)],
     ["ASN", sanitizeDisplay(event.src_asn) || "—"],
     ["Country", sanitizeDisplay(event.src_country)],
     ["Sensor", sanitizeDisplay(event.sensor_id)],
     ["Protocol", `${sanitizeDisplay(event.protocol)} / ${event.dst_port}`],
-    ["Type", sanitizeDisplay(event.event_type)],
+    ["Type", eventTypeLabel(event.event_type)],
+    ["Event", sanitizeDisplay(kind) || "—"],
+    ["What", eventSummary(event)],
     ["Session", sanitizeDisplay(event.session_id) || "—"],
     ["UTC", sanitizeDisplay(event.timestamp)],
   ];
+  if (username || password) rows.splice(6, 0, ["Credential", sanitizeDisplay(`${username}/${password}`)]);
+  if (outcome) rows.splice(6, 0, ["Login", outcome === "success" ? "success" : "failed"]);
+  if (input) rows.splice(6, 0, ["Command", sanitizeDisplay(input)]);
+  if (dest) rows.splice(6, 0, ["File", sanitizeDisplay(dest)]);
+  if (shasum) rows.splice(6, 0, ["SHA-256", sanitizeDisplay(shasum)]);
+
   return (
     <div>
-      <p className="mb-3 text-sm font-medium" style={{ color: severityColor(event.severity) }}>
-        {severityLabel(event.severity)}
+      <p className="mb-3 text-sm font-medium" style={{ color: eventTypeColor(event.event_type) }}>
+        {eventTypeLabel(event.event_type)}
+        <span className="ml-2 text-xs" style={{ color: severityColor(event.severity) }}>
+          {event.severity}
+        </span>
       </p>
       <dl className="space-y-2 text-sm">
         {rows.map(([k, v]) => (
           <div key={k} className="flex items-start justify-between gap-4">
             <dt className="shrink-0 text-hive-quiet">{k}</dt>
             <dd
-              data-testid={k === "IP" ? "detail-ip" : undefined}
+              data-testid={k === "IP" ? "detail-ip" : k === "What" ? "detail-summary" : undefined}
               className="min-w-0 break-all text-right text-hive-ink"
             >
               {v}

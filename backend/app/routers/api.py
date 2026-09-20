@@ -76,6 +76,7 @@ def build_router(book: SensorBook) -> APIRouter:
         src_ip: str | None = None,
         protocol: str | None = None,
         severity: str | None = None,
+        event_type: str | None = None,
         time_from: str | None = Query(default=None, alias="from"),
         time_to: str | None = Query(default=None, alias="to"),
         q: str | None = None,
@@ -87,6 +88,7 @@ def build_router(book: SensorBook) -> APIRouter:
             src_ip=src_ip,
             protocol=protocol,
             severity=severity,
+            event_type=event_type,
             time_from=time_from,
             time_to=time_to,
             q=q,
@@ -99,10 +101,16 @@ def build_router(book: SensorBook) -> APIRouter:
     @api.get("/stats", response_model=StatsPayload)
     async def stats_view(
         sensor_id: str | None = None,
+        event_type: str | None = None,
         time_from: str | None = Query(default=None, alias="from"),
         time_to: str | None = Query(default=None, alias="to"),
     ) -> StatsPayload:
-        return await stats(time_from=time_from, time_to=time_to, sensor_id=sensor_id)
+        return await stats(
+            time_from=time_from,
+            time_to=time_to,
+            sensor_id=sensor_id,
+            event_type=event_type,
+        )
 
     @api.get("/timeline", response_model=list[TimelineBucket])
     async def timeline_view(

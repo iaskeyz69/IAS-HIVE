@@ -1,5 +1,14 @@
 import { authHeader } from "./auth";
-import type { BaitApplyResult, BaitPayload, HiveEvent, SensorStatus, StatsPayload, TimelineBucket, TimeWindow } from "../types";
+import type {
+  BaitApplyResult,
+  BaitPayload,
+  EventType,
+  HiveEvent,
+  SensorStatus,
+  StatsPayload,
+  TimelineBucket,
+  TimeWindow,
+} from "../types";
 
 export class AuthError extends Error {
   constructor() {
@@ -46,6 +55,7 @@ export const api = {
       q?: string;
       protocol?: string;
       severity?: string;
+      eventType?: EventType | null;
       limit?: number;
       offset?: number;
     } = {},
@@ -59,29 +69,26 @@ export const api = {
         q: opts.q,
         protocol: opts.protocol,
         severity: opts.severity,
+        event_type: opts.eventType,
         limit: opts.limit ?? 200,
         offset: opts.offset ?? 0,
       })}`,
     ),
-  stats: (token: string, sensorId?: string | null, window?: TimeWindow | null) =>
+  stats: (token: string, sensorId?: string | null, window?: TimeWindow | null, eventType?: EventType | null) =>
     request<StatsPayload>(
       token,
       `/api/stats${queryString({
         sensor_id: sensorId,
         from: window?.from,
         to: window?.to,
+        event_type: eventType,
       })}`,
     ),
   timeline: (token: string, hours = 1, sensorId?: string | null) =>
-    request<TimelineBucket[]>(
-      token,
-      `/api/timeline${queryString({ hours, sensor_id: sensorId })}`,
-    ),
-  summary: (token: string) =>
-    request<{ events_24h: number; sensors: number }>(token, "/api/summary"),
+    request<TimelineBucket[]>(token, `/api/timeline${queryString({ hours, sensor_id: sensorId })}`),
+  summary: (token: string) => request<{ events_24h: number; sensors: number }>(token, "/api/summary"),
   bait: (token: string) => request<BaitPayload>(token, "/api/bait"),
   saveBait: (token: string, services: Record<string, boolean>) =>
     request<BaitPayload>(token, "/api/bait", { method: "PUT", body: JSON.stringify({ services }) }),
-  applyBait: (token: string) =>
-    request<BaitApplyResult>(token, "/api/bait/apply", { method: "POST" }),
+  applyBait: (token: string) => request<BaitApplyResult>(token, "/api/bait/apply", { method: "POST" }),
 };

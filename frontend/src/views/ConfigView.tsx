@@ -5,7 +5,7 @@ import type { BaitService } from "../types";
 export function ConfigView({ token }: { token: string }) {
   const [rows, setRows] = useState<BaitService[]>([]);
   const [saved, setSaved] = useState<Record<string, boolean>>({});
-  const [bind, setBind] = useState("10.0.10.4");
+  const [bind, setBind] = useState("10.0.20.3");
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);

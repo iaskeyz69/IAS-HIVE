@@ -43,6 +43,20 @@ class TimelineBucket(BaseModel):
     count: int
 
 
+class TypeTimeBucket(BaseModel):
+    t: str
+    scan: int = 0
+    login_attempt: int = 0
+    command: int = 0
+    payload: int = 0
+
+
+class HitSnippet(BaseModel):
+    timestamp: str = ""
+    src_ip: str = ""
+    text: str = ""
+
+
 class NamedCount(BaseModel):
     name: str
     count: int
@@ -55,10 +69,20 @@ class PortCount(BaseModel):
 
 class StatsPayload(BaseModel):
     events_24h: int
+    unique_ips: int = 0
+    by_type: list[NamedCount] = Field(default_factory=list)
+    login_success: int = 0
+    login_fail: int = 0
+    lan_count: int = 0
+    internet_count: int = 0
     top_countries: list[NamedCount]
     top_ports: list[PortCount]
     over_time: list[TimelineBucket]
+    over_time_by_type: list[TypeTimeBucket] = Field(default_factory=list)
     protocols: list[NamedCount]
+    top_ips: list[NamedCount] = Field(default_factory=list)
+    recent_commands: list[HitSnippet] = Field(default_factory=list)
+    recent_payloads: list[HitSnippet] = Field(default_factory=list)
 
 
 class EventList(BaseModel):
@@ -78,6 +102,7 @@ class EventFilters(BaseModel):
     src_ip: str | None = None
     protocol: str | None = None
     severity: str | None = None
+    event_type: str | None = None
     time_from: str | None = Field(default=None, alias="from")
     time_to: str | None = Field(default=None, alias="to")
     q: str | None = None
@@ -85,7 +110,6 @@ class EventFilters(BaseModel):
     offset: int = 0
 
     model_config = {"populate_by_name": True}
-
 
 
 class BaitService(BaseModel):
@@ -98,7 +122,7 @@ class BaitService(BaseModel):
 
 
 class BaitPayload(BaseModel):
-    bind: str = "10.0.10.4"
+    bind: str = "10.0.20.3"
     services: list[BaitService]
 
 
@@ -111,4 +135,4 @@ class BaitApplyResult(BaseModel):
     error: str | None = None
     actions: list[str] = Field(default_factory=list)
     services: list[BaitService] = Field(default_factory=list)
-    bind: str = "10.0.10.4"
+    bind: str = "10.0.20.3"

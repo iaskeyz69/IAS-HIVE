@@ -19,13 +19,12 @@ VLAN / LAN bait                         Management host
 Cowrie :2222  ─┐
 OpenCanary    ─┴─ JSON logs ──► ./data/logs ──► hive-api + hive-ui
   21/23/3306/6379/8080                         127.0.0.1:8443
-                                               10.0.10.4:8443   ← Wi-Fi LAN
                                                10.0.20.3:8443   ← enx68e43b309f1c
 ```
 
 - Do **not** attach `hive_mgmt` to a bait bridge.
 - Do **not** publish `8443` on `0.0.0.0` or the public internet.
-- Real SSH stays on the host (never bait port 22). Cowrie is `10.0.10.4:2222` and `10.0.20.3:2222`.
+- Real SSH stays on the host (never bait port 22). Cowrie is `10.0.20.3:2222`.
 - Mapbox tiles load in the **operator browser**. The API container does not need a default route for GeoIP (local `.mmdb`).
 
 ## After git clone (Docker)
@@ -51,7 +50,7 @@ Edit `.env` before the first build:
 | `DOCKER_GID` | Host `docker` group GID (`getent group docker`). Needed for Config → Apply. |
 | `VITE_MAPBOX_TOKEN` | Public Mapbox `pk.` token in **this root `.env`** so `docker compose build` bakes it into the UI. |
 
-URL-restrict the Mapbox token to `http://127.0.0.1:8443`, `http://10.0.10.4:8443`, and `http://10.0.20.3:8443` (plus `http://localhost:5173` for Vite).
+URL-restrict the Mapbox token to `http://127.0.0.1:8443` and `http://10.0.20.3:8443` (plus `http://localhost:5173` for Vite).
 
 ```bash
 # Dashboard
@@ -61,7 +60,7 @@ docker compose up -d --build
 docker compose -f docker-compose.sensors.yml up -d
 ```
 
-Open **http://10.0.20.3:8443** or **http://10.0.10.4:8443** on the LAN, or **http://127.0.0.1:8443** locally.
+Open **http://10.0.20.3:8443** on the LAN, or **http://127.0.0.1:8443** locally.
 Sign in with `HIVE_USER` / `HIVE_PASSWORD`. Hard-refresh after a UI rebuild.
 
 ### Dashboard bind
@@ -71,10 +70,9 @@ Sign in with `HIVE_USER` / `HIVE_PASSWORD`. Hard-refresh after a UI rebuild.
 | Address | Interface | Who can open it |
 |---|---|---|
 | `127.0.0.1:8443` | loopback | This host |
-| `10.0.10.4:8443` | `wlp58s0` | `10.0.10.0/24` (UFW) |
 | `10.0.20.3:8443` | `enx68e43b309f1c` | `10.0.20.0/24` (UFW) |
 
-Bait listeners stay on `10.0.10.4`. Adding another mgmt NIC means a compose
+Bait listeners stay on `10.0.20.3`. Adding another mgmt NIC means a compose
 `ports:` line, a UFW allow from that subnet to `8443/tcp`, the CORS origin in
 `backend/app/main.py`, and the same URL on the Mapbox token restriction.
 
@@ -102,15 +100,15 @@ type a new port or bind IP.
 
 | Id | Sensor | Host port |
 |---|---|---|
-| `cowrie-ssh` | Cowrie | `10.0.10.4:2222` and `10.0.20.3:2222` |
+| `cowrie-ssh` | Cowrie | `10.0.20.3:2222` |
 | `ftp` | OpenCanary | 21 |
 | `telnet` | OpenCanary | 23 |
 | `mysql` | OpenCanary | 3306 |
 | `redis` | OpenCanary | 6379 |
 | `http` | OpenCanary | 8080 |
 
-SSH/80/443/RDP and other OpenCanary modules stay off. OpenCanary ports stay on `10.0.10.4`.
-UFW allows Cowrie `2222/tcp` from `10.0.10.0/24` and `10.0.20.0/24`.
+SSH/80/443/RDP and other OpenCanary modules stay off. OpenCanary ports stay on `10.0.20.3`.
+UFW allows Cowrie `2222/tcp` from `10.0.20.0/24`.
 
 1. Toggle services.
 2. **Save** writes `sensors/opencanary.conf` (`*.enabled` only) and `/data/bait.json` (Cowrie flag).
@@ -182,7 +180,7 @@ a Docker socket the API user can open.
 
 Live HUD tests (Playwright) live in `e2e/`. They need `HIVE_USER`,
 `HIVE_PASSWORD`, and a running dashboard. `HIVE_BASE_URL` defaults to
-`http://10.0.10.4:8443`; use `http://10.0.20.3:8443` if you test from that NIC.
+`http://10.0.20.3:8443`.
 
 ## API (all REST routes require HTTP Basic)
 
@@ -211,14 +209,14 @@ Forward **bait only**. Do not put the dashboard or the real host on the internet
 
 | Forward | Port | Why |
 |---|---|---|
-| Yes | `2222` | Cowrie SSH honeypot (`10.0.10.4` and `10.0.20.3`) |
-| Optional | `21` `23` `3306` `6379` `8080` | OpenCanary on `10.0.10.4` only |
+| Yes | `2222` | Cowrie SSH honeypot (`10.0.20.3`) |
+| Optional | `21` `23` `3306` `6379` `8080` | OpenCanary on `10.0.20.3` only |
 | **Never** | `8443` | Hive UI + API. Basic auth is weak if unchanged. The API has the Docker socket. |
 | **Never** | `22` | Real host SSH |
 | **Never** | `80` `443` `3389` | Host services, not bait |
 
 Router NAT should target the bait IPs above, not `0.0.0.0` on the host. UFW
-already limits `:8443` to `10.0.10.0/24` and `10.0.20.0/24`. Do not add
+already limits `:8443` to `10.0.20.0/24`. Do not add
 `8443` from Anywhere.
 
 ## Security
@@ -228,8 +226,7 @@ already limits `:8443` to `10.0.10.0/24` and `10.0.20.0/24`. Do not add
   Raw lines are length-capped on ingest.
 - HTTP Basic is required on every REST call, including `/api/health`.
 - Change `HIVE_PASSWORD`. The API refuses to start if user or password is unset.
-- Keep the dashboard off the public internet. `:8443` is bound to loopback,
-  `10.0.10.4`, and `10.0.20.3` only. Do not forward 8443 from a WAN router.
+- Keep the dashboard off the public internet. `:8443` is bound to loopback and `10.0.20.3` only. Do not forward 8443 from a WAN router.
 - `/var/run/docker.sock` in `hive-api` is a privilege boundary. The API only
   start/stops `hive-cowrie` and restarts `hive-opencanary`. A compromised API
   process can still reach the Docker Engine — restrict who can reach `:8443`.

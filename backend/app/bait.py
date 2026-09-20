@@ -62,7 +62,7 @@ CATALOG: list[dict[str, Any]] = [
 ]
 
 ALLOWED_IDS = {item["id"] for item in CATALOG}
-BIND = "10.0.10.4"
+BIND = "10.0.20.3"
 
 
 class UnixHTTPConnection(http.client.HTTPConnection):
