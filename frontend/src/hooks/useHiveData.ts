@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, AuthError } from "../lib/api";
 import { EVENT_TYPES } from "../lib/eventSummary";
+import { DEFAULT_TZ } from "../lib/time";
 import { openEventSocket } from "../lib/ws";
 import type { EventType, HiveEvent, LiveArc, SensorStatus, StatsPayload, TimelineBucket, TimeWindow } from "../types";
 
@@ -19,16 +20,32 @@ function inWindow(event: HiveEvent, range: TimeWindow | null): boolean {
   return event.timestamp >= range.from && event.timestamp <= range.to;
 }
 
+function countBy(events: HiveEvent[], key: (event: HiveEvent) => string): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const event of events) {
+    const name = key(event);
+    if (!name) continue;
+    counts[name] = (counts[name] ?? 0) + 1;
+  }
+  return counts;
+}
+
 export function useHiveData(token: string | null, onAuthFail: () => void) {
   const [sensors, setSensors] = useState<SensorStatus[]>([]);
+  const [catalog, setCatalog] = useState<HiveEvent[]>([]);
   const [events, setEvents] = useState<HiveEvent[]>([]);
   const [arcs, setArcs] = useState<LiveArc[]>([]);
   const [timeline, setTimeline] = useState<TimelineBucket[]>([]);
   const [stats, setStats] = useState<StatsPayload | null>(null);
   const [events24h, setEvents24h] = useState(0);
   const [streamUp, setStreamUp] = useState(false);
+  const [timezone, setTimezone] = useState(DEFAULT_TZ);
   const [sensorId, setSensorId] = useState<string | null>(null);
   const [eventType, setEventType] = useState<EventType | null>(null);
+  const [srcIp, setSrcIp] = useState<string | null>(null);
+  const [country, setCountry] = useState<string | null>(null);
+  const [dstPort, setDstPort] = useState<number | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [timeWindow, setTimeWindow] = useState<TimeWindow | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<HiveEvent | null>(null);
   const [selectedSensor, setSelectedSensor] = useState<SensorStatus | null>(null);
@@ -43,29 +60,35 @@ export function useHiveData(token: string | null, onAuthFail: () => void) {
   const refresh = useCallback(async () => {
     if (!token) return;
     try {
-      const [sensorRows, eventPage, buckets, summary] = await Promise.all([
+      const [sensorRows, eventPage, focusedPage, buckets, summary, health] = await Promise.all([
         api.sensors(token),
         api.events(token, { sensorId, window: timeWindow, limit: 400 }),
+        srcIp
+          ? api.events(token, { sensorId, window: timeWindow, srcIp, limit: 400 })
+          : Promise.resolve(null),
         api.timeline(token, 1, sensorId),
         api.summary(token),
+        api.health(token),
       ]);
       setSensors(sensorRows);
-      setEvents(eventPage.events);
+      setCatalog(eventPage.events);
+      setEvents(focusedPage ? focusedPage.events : eventPage.events);
       setTimeline(buckets);
       setEvents24h(summary.events_24h);
+      if (health.timezone) setTimezone(health.timezone);
     } catch (err) {
       handleFail(err);
     }
-  }, [token, sensorId, timeWindow, handleFail]);
+  }, [token, sensorId, timeWindow, srcIp, handleFail]);
 
   const refreshStats = useCallback(async () => {
     if (!token) return;
     try {
-      setStats(await api.stats(token, sensorId, timeWindow, eventType));
+      setStats(await api.stats(token, sensorId, timeWindow, eventType, srcIp));
     } catch (err) {
       handleFail(err);
     }
-  }, [token, sensorId, timeWindow, eventType, handleFail]);
+  }, [token, sensorId, timeWindow, eventType, srcIp, handleFail]);
 
   useEffect(() => {
     void refresh();
@@ -84,6 +107,7 @@ export function useHiveData(token: string | null, onAuthFail: () => void) {
       (data) => {
         if (!isEvent(data)) return;
         setEvents24h((n) => n + 1);
+        setCatalog((prev) => [data, ...prev.filter((e) => e.id !== data.id)].slice(0, EVENT_CAP));
         setEvents((prev) => [data, ...prev.filter((e) => e.id !== data.id)].slice(0, EVENT_CAP));
         setArcs((prev) => [{ ...data, bornAt: Date.now() }, ...prev].slice(0, ARC_CAP));
       },
@@ -102,13 +126,26 @@ export function useHiveData(token: string | null, onAuthFail: () => void) {
   }, []);
 
   const scoped = useMemo(
-    () => events.filter((e) => (!sensorId || e.sensor_id === sensorId) && inWindow(e, timeWindow)),
-    [events, sensorId, timeWindow],
+    () => catalog.filter((e) => (!sensorId || e.sensor_id === sensorId) && inWindow(e, timeWindow)),
+    [catalog, sensorId, timeWindow],
+  );
+
+  const working = useMemo(
+    () => (srcIp ? events : catalog).filter((e) => (!sensorId || e.sensor_id === sensorId) && inWindow(e, timeWindow)),
+    [srcIp, events, catalog, sensorId, timeWindow],
   );
 
   const filteredEvents = useMemo(
-    () => scoped.filter((e) => !eventType || e.event_type === eventType),
-    [scoped, eventType],
+    () =>
+      working.filter(
+        (e) =>
+          (!eventType || e.event_type === eventType) &&
+          (!srcIp || e.src_ip === srcIp) &&
+          (!country || e.src_country === country) &&
+          (dstPort == null || e.dst_port === dstPort) &&
+          (!sessionId || e.session_id === sessionId),
+      ),
+    [working, eventType, srcIp, country, dstPort, sessionId],
   );
 
   const typeCounts = useMemo(() => {
@@ -117,15 +154,27 @@ export function useHiveData(token: string | null, onAuthFail: () => void) {
     return counts;
   }, [scoped]);
 
+  const ipCounts = useMemo(() => countBy(scoped, (e) => e.src_ip), [scoped]);
+  const countryCounts = useMemo(() => countBy(scoped, (e) => e.src_country || "UNK"), [scoped]);
+  const portCounts = useMemo(() => countBy(scoped, (e) => String(e.dst_port)), [scoped]);
+  const sessions = useMemo(
+    () => [...new Set(scoped.map((e) => e.session_id).filter(Boolean))].slice(0, 80),
+    [scoped],
+  );
+
   const filteredArcs = useMemo(
     () =>
       arcs.filter(
         (e) =>
           (!sensorId || e.sensor_id === sensorId) &&
           inWindow(e, timeWindow) &&
-          (!eventType || e.event_type === eventType),
+          (!eventType || e.event_type === eventType) &&
+          (!srcIp || e.src_ip === srcIp) &&
+          (!country || e.src_country === country) &&
+          (dstPort == null || e.dst_port === dstPort) &&
+          (!sessionId || e.session_id === sessionId),
       ),
-    [arcs, sensorId, timeWindow, eventType],
+    [arcs, sensorId, timeWindow, eventType, srcIp, country, dstPort, sessionId],
   );
 
   const pickSensor = (sensor: SensorStatus | null) => {
@@ -147,11 +196,24 @@ export function useHiveData(token: string | null, onAuthFail: () => void) {
     stats,
     events24h,
     streamUp,
+    timezone,
     sensorId,
     setSensorId,
     eventType,
     setEventType,
     typeCounts,
+    srcIp,
+    setSrcIp,
+    country,
+    setCountry,
+    dstPort,
+    setDstPort,
+    sessionId,
+    setSessionId,
+    ipCounts,
+    countryCounts,
+    portCounts,
+    sessions,
     timeWindow,
     setTimeWindow,
     selectedEvent,

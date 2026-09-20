@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.auth import require_basic
-from app.config import SensorBook, get_settings
+from app.config import SensorBook, get_settings, host_timezone
 from app.db import events_since_count, last_events_for_sensors, list_events, stats, timeline
 from app.geo import geoip_available
 from app.bait import BIND, apply_services, current_services, save_services
@@ -35,6 +35,7 @@ def build_router(book: SensorBook) -> APIRouter:
             demo=settings.demo,
             sensors=len(book.sensors),
             geoip=geoip_available(),
+            timezone=host_timezone(),
         )
 
     @api.get("/sensors", response_model=list[SensorStatus])
@@ -102,6 +103,7 @@ def build_router(book: SensorBook) -> APIRouter:
     async def stats_view(
         sensor_id: str | None = None,
         event_type: str | None = None,
+        src_ip: str | None = None,
         time_from: str | None = Query(default=None, alias="from"),
         time_to: str | None = Query(default=None, alias="to"),
     ) -> StatsPayload:
@@ -110,6 +112,7 @@ def build_router(book: SensorBook) -> APIRouter:
             time_to=time_to,
             sensor_id=sensor_id,
             event_type=event_type,
+            src_ip=src_ip,
         )
 
     @api.get("/timeline", response_model=list[TimelineBucket])

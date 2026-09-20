@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
+import { HitFilters } from "../components/HitFilters";
 import { TypeFilter } from "../components/TypeFilter";
 import { eventTypeColor, eventTypeLabel } from "../lib/colors";
 import { eventSummary, portLabel } from "../lib/eventSummary";
+import { formatHiveClock, formatHiveDate, tzAbbrev } from "../lib/time";
 import { sanitizeDisplay } from "../lib/sanitize";
-import type { EventType, HiveEvent } from "../types";
+import type { EventType, HiveEvent, TimeWindow } from "../types";
 
 type Col = "timestamp" | "event_type" | "src_ip" | "summary" | "dst_port" | "session_id";
 
@@ -12,6 +14,21 @@ export function TableView({
   typeCounts,
   eventType,
   onEventType,
+  timezone,
+  timeWindow,
+  onTimeWindow,
+  srcIp,
+  onSrcIp,
+  country,
+  onCountry,
+  dstPort,
+  onDstPort,
+  sessionId,
+  onSessionId,
+  ipCounts,
+  countryCounts,
+  portCounts,
+  sessions,
   selectedId,
   onSelect,
 }: {
@@ -19,6 +36,21 @@ export function TableView({
   typeCounts: Record<string, number>;
   eventType: EventType | null;
   onEventType: (next: EventType | null) => void;
+  timezone: string;
+  timeWindow: TimeWindow | null;
+  onTimeWindow: (next: TimeWindow | null) => void;
+  srcIp: string | null;
+  onSrcIp: (next: string | null) => void;
+  country: string | null;
+  onCountry: (next: string | null) => void;
+  dstPort: number | null;
+  onDstPort: (next: number | null) => void;
+  sessionId: string | null;
+  onSessionId: (next: string | null) => void;
+  ipCounts: Record<string, number>;
+  countryCounts: Record<string, number>;
+  portCounts: Record<string, number>;
+  sessions: string[];
   selectedId: string | null;
   onSelect: (event: HiveEvent) => void;
 }) {
@@ -73,29 +105,58 @@ export function TableView({
     );
   }
 
+  function facetButton(label: string, onPick: () => void, testid: string) {
+    return (
+      <button
+        type="button"
+        data-testid={testid}
+        className="text-left hover:text-hive-cyan"
+        onClick={(ev) => {
+          ev.stopPropagation();
+          onPick();
+        }}
+        title="Filter to this value"
+      >
+        {label}
+      </button>
+    );
+  }
+
   return (
     <div data-testid="table-view" className="absolute inset-0 flex flex-col bg-hive-bg p-4 pb-20 pl-[19.5rem] pr-4 pt-14">
-      <div className="mb-3 flex flex-wrap items-center gap-3">
+      <div className="mb-3 flex flex-col gap-2">
         <TypeFilter value={eventType} counts={typeCounts} onChange={onEventType} />
-        <input
-          data-testid="table-filter"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search IP, command, credential, session, country…"
-          className="min-w-[16rem] flex-1 rounded-lg bg-hive-panel px-3 py-2 text-sm text-hive-ink outline-none ring-1 ring-hive-line focus:ring-hive-cyan"
+        <HitFilters
+          timezone={timezone}
+          timeWindow={timeWindow}
+          onTimeWindow={onTimeWindow}
+          srcIp={srcIp}
+          onSrcIp={onSrcIp}
+          country={country}
+          onCountry={onCountry}
+          dstPort={dstPort}
+          onDstPort={onDstPort}
+          sessionId={sessionId}
+          onSessionId={onSessionId}
+          ipCounts={ipCounts}
+          countryCounts={countryCounts}
+          portCounts={portCounts}
+          sessions={sessions}
+          search={q}
+          onSearch={setQ}
         />
       </div>
       <div className="min-h-0 flex-1 overflow-auto rounded-card bg-hive-panel">
         {rows.length === 0 ? (
           <p data-testid="table-empty" className="px-4 py-10 text-center text-sm text-hive-quiet">
-            No hits in this kill-chain filter.
+            No hits match these filters.
           </p>
         ) : (
           <table className="w-full border-collapse text-sm">
             <thead className="sticky top-0 z-10 bg-hive-panel">
               <tr>
                 {header("event_type", "Type")}
-                {header("timestamp", "Time")}
+                {header("timestamp", `Time (${tzAbbrev(timezone)})`)}
                 {header("src_ip", "Source")}
                 {header("summary", "What happened")}
                 {header("dst_port", "Port")}
@@ -125,19 +186,28 @@ export function TableView({
                         {eventTypeLabel(event.event_type)}
                       </span>
                     </td>
-                    <td className="px-3 py-2 font-mono text-hive-cyan">{sanitizeDisplay(event.timestamp)}</td>
+                    <td data-testid="table-time" className="px-3 py-2 font-mono text-hive-cyan">
+                      <div>{formatHiveClock(event.timestamp, timezone)}</div>
+                      <div className="text-[11px] text-hive-quiet">{formatHiveDate(event.timestamp, timezone)}</div>
+                    </td>
                     <td className="px-3 py-2">
-                      <div className="font-mono text-hive-ink">{sanitizeDisplay(event.src_ip)}</div>
-                      <div className="text-[11px] text-hive-quiet">{sanitizeDisplay(event.src_country) || "UNK"}</div>
+                      <div className="font-mono text-hive-ink">
+                        {facetButton(sanitizeDisplay(event.src_ip), () => onSrcIp(event.src_ip), "table-ip")}
+                      </div>
+                      <div className="text-[11px] text-hive-quiet">
+                        {facetButton(sanitizeDisplay(event.src_country) || "UNK", () => onCountry(event.src_country), "table-country")}
+                      </div>
                     </td>
                     <td data-testid="table-summary" className="max-w-[28rem] truncate px-3 py-2 text-hive-ink">
                       {eventSummary(event)}
                     </td>
                     <td className="px-3 py-2 font-mono text-hive-quiet">
-                      {portLabel(event.dst_port, event.protocol)}
+                      {facetButton(portLabel(event.dst_port, event.protocol), () => onDstPort(event.dst_port), "table-port")}
                     </td>
                     <td className="px-3 py-2 font-mono text-[11px] text-hive-quiet">
-                      {sanitizeDisplay(event.session_id) || "—"}
+                      {event.session_id
+                        ? facetButton(sanitizeDisplay(event.session_id), () => onSessionId(event.session_id), "table-session")
+                        : "—"}
                     </td>
                   </tr>
                 );

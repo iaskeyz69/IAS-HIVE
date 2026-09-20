@@ -1,5 +1,6 @@
 import { eventTypeColor, eventTypeLabel } from "../lib/colors";
 import { eventSummary } from "../lib/eventSummary";
+import { formatHiveClock } from "../lib/time";
 import { sanitizeDisplay } from "../lib/sanitize";
 import type { HiveEvent } from "../types";
 
@@ -7,10 +8,12 @@ export function EventFeed({
   events,
   selectedId,
   onSelect,
+  timezone,
 }: {
   events: HiveEvent[];
   selectedId: string | null;
   onSelect: (event: HiveEvent) => void;
+  timezone: string;
 }) {
   return (
     <ul data-testid="event-feed">
@@ -36,7 +39,7 @@ export function EventFeed({
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-3">
                     <span className="font-mono tabular-nums text-[13px] font-medium text-hive-ink">
-                      {event.timestamp.slice(11, 19)}
+                      {formatHiveClock(event.timestamp, timezone)}
                     </span>
                     <span
                       className="shrink-0 font-mono text-[11px] font-medium uppercase tracking-wide"

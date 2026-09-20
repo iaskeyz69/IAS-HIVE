@@ -15,10 +15,12 @@ import {
 } from "recharts";
 import type { ReactNode } from "react";
 import { TypeFilter } from "../components/TypeFilter";
+import { HitFilters } from "../components/HitFilters";
 import { EVENT_TYPE_COLOR } from "../lib/colors";
 import { EVENT_TYPE_LABEL, portLabel } from "../lib/eventSummary";
+import { formatHiveClock } from "../lib/time";
 import { sanitizeDisplay } from "../lib/sanitize";
-import type { EventType, StatsPayload } from "../types";
+import type { EventType, StatsPayload, TimeWindow } from "../types";
 
 const QUIET = "rgba(232, 234, 237, 0.55)";
 const SLICES = ["#00D4FF", "#FF4D4D", "#FFB800", "rgba(232,234,237,0.45)", "#33FF33", "#66E0FF", "#E8EAED"];
@@ -29,11 +31,41 @@ export function StatsView({
   typeCounts,
   eventType,
   onEventType,
+  timezone,
+  timeWindow,
+  onTimeWindow,
+  srcIp,
+  onSrcIp,
+  country,
+  onCountry,
+  dstPort,
+  onDstPort,
+  sessionId,
+  onSessionId,
+  ipCounts,
+  countryCounts,
+  portCounts,
+  sessions,
 }: {
   stats: StatsPayload | null;
   typeCounts: Record<string, number>;
   eventType: EventType | null;
   onEventType: (next: EventType | null) => void;
+  timezone: string;
+  timeWindow: TimeWindow | null;
+  onTimeWindow: (next: TimeWindow | null) => void;
+  srcIp: string | null;
+  onSrcIp: (next: string | null) => void;
+  country: string | null;
+  onCountry: (next: string | null) => void;
+  dstPort: number | null;
+  onDstPort: (next: number | null) => void;
+  sessionId: string | null;
+  onSessionId: (next: string | null) => void;
+  ipCounts: Record<string, number>;
+  countryCounts: Record<string, number>;
+  portCounts: Record<string, number>;
+  sessions: string[];
 }) {
   if (!stats) {
     return (
@@ -50,8 +82,26 @@ export function StatsView({
 
   return (
     <div data-testid="stats-view" className="absolute inset-0 overflow-auto bg-hive-bg p-4 pb-20 pl-[19.5rem] pr-4 pt-14">
-      <div className="mb-3">
+      <div className="mb-3 flex flex-col gap-2">
         <TypeFilter value={eventType} counts={typeCounts} onChange={onEventType} />
+        <HitFilters
+          timezone={timezone}
+          timeWindow={timeWindow}
+          onTimeWindow={onTimeWindow}
+          srcIp={srcIp}
+          onSrcIp={onSrcIp}
+          country={country}
+          onCountry={onCountry}
+          dstPort={dstPort}
+          onDstPort={onDstPort}
+          sessionId={sessionId}
+          onSessionId={onSessionId}
+          ipCounts={ipCounts}
+          countryCounts={countryCounts}
+          portCounts={portCounts}
+          sessions={sessions}
+          showSearch={false}
+        />
       </div>
       <div data-testid="stats-kpis" className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
         <Kpi label="Unique IPs" value={stats.unique_ips} testid="kpi-unique-ips" />
@@ -72,7 +122,7 @@ export function StatsView({
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={stacked}>
               <CartesianGrid stroke="rgba(59,130,246,0.12)" />
-              <XAxis dataKey="t" tick={{ fill: QUIET, fontSize: 11 }} tickFormatter={(v) => String(v).slice(11, 16)} />
+              <XAxis dataKey="t" tick={{ fill: QUIET, fontSize: 11 }} tickFormatter={(v) => formatHiveClock(String(v), timezone)} />
               <YAxis tick={{ fill: QUIET, fontSize: 11 }} />
               <Tooltip contentStyle={tip} />
               <Legend />
@@ -156,7 +206,7 @@ export function StatsView({
           {stats.recent_commands.map((row, i) => (
             <li key={`${row.timestamp}-${i}`} className="text-xs">
               <span className="font-mono text-hive-quiet">
-                {row.timestamp.slice(11, 19)} {sanitizeDisplay(row.src_ip)}
+                {formatHiveClock(row.timestamp, timezone)} {sanitizeDisplay(row.src_ip)}
               </span>
               <p className="truncate text-hive-ink">{sanitizeDisplay(row.text)}</p>
             </li>
@@ -166,7 +216,7 @@ export function StatsView({
           {stats.recent_payloads.map((row, i) => (
             <li key={`${row.timestamp}-${i}`} className="text-xs">
               <span className="font-mono text-hive-quiet">
-                {row.timestamp.slice(11, 19)} {sanitizeDisplay(row.src_ip)}
+                {formatHiveClock(row.timestamp, timezone)} {sanitizeDisplay(row.src_ip)}
               </span>
               <p className="truncate text-hive-ink">{sanitizeDisplay(row.text)}</p>
             </li>

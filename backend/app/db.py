@@ -325,10 +325,12 @@ async def stats(
     time_to: str | None = None,
     sensor_id: str | None = None,
     event_type: str | None = None,
+    src_ip: str | None = None,
 ) -> StatsPayload:
     filters = EventFilters(
         sensor_id=sensor_id,
         event_type=event_type,
+        src_ip=src_ip,
         time_from=time_from,
         time_to=time_to,
         limit=1,

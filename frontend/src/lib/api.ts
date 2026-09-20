@@ -45,7 +45,7 @@ export function queryString(params: Record<string, string | number | undefined |
 
 export const api = {
   health: (token: string) =>
-    request<{ status: string; demo: boolean; sensors: number; geoip: boolean }>(token, "/api/health"),
+    request<{ status: string; demo: boolean; sensors: number; geoip: boolean; timezone?: string }>(token, "/api/health"),
   sensors: (token: string) => request<SensorStatus[]>(token, "/api/sensors"),
   events: (
     token: string,
@@ -56,6 +56,7 @@ export const api = {
       protocol?: string;
       severity?: string;
       eventType?: EventType | null;
+      srcIp?: string | null;
       limit?: number;
       offset?: number;
     } = {},
@@ -70,11 +71,18 @@ export const api = {
         protocol: opts.protocol,
         severity: opts.severity,
         event_type: opts.eventType,
+        src_ip: opts.srcIp,
         limit: opts.limit ?? 200,
         offset: opts.offset ?? 0,
       })}`,
     ),
-  stats: (token: string, sensorId?: string | null, window?: TimeWindow | null, eventType?: EventType | null) =>
+  stats: (
+    token: string,
+    sensorId?: string | null,
+    window?: TimeWindow | null,
+    eventType?: EventType | null,
+    srcIp?: string | null,
+  ) =>
     request<StatsPayload>(
       token,
       `/api/stats${queryString({
@@ -82,6 +90,7 @@ export const api = {
         from: window?.from,
         to: window?.to,
         event_type: eventType,
+        src_ip: srcIp,
       })}`,
     ),
   timeline: (token: string, hours = 1, sensorId?: string | null) =>

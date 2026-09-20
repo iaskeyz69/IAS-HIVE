@@ -1,14 +1,17 @@
 import { useMemo, useRef, useState, type MouseEvent } from "react";
+import { formatHiveTime } from "../lib/time";
 import type { TimelineBucket, TimeWindow } from "../types";
 
 export function TimelineScrubber({
   buckets,
   window,
   onChange,
+  timezone,
 }: {
   buckets: TimelineBucket[];
   window: TimeWindow | null;
   onChange: (window: TimeWindow | null) => void;
+  timezone: string;
 }) {
   const max = Math.max(1, ...buckets.map((b) => b.count));
   const drag = useRef<{ start: number; end: number } | null>(null);
@@ -87,7 +90,7 @@ export function TimelineScrubber({
           return (
             <div
               key={bucket.t}
-              title={`${bucket.t} · ${bucket.count}`}
+              title={`${formatHiveTime(bucket.t, timezone)} · ${bucket.count}`}
               className={`flex-1 ${active ? "bg-hive-blue" : "bg-hive-blue/30"}`}
               style={{ height: h }}
             />

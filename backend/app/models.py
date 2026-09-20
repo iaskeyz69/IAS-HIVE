@@ -95,6 +95,7 @@ class HealthPayload(BaseModel):
     demo: bool = False
     sensors: int = 0
     geoip: bool = False
+    timezone: str = "Asia/Kuala_Lumpur"
 
 
 class EventFilters(BaseModel):

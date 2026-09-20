@@ -27,6 +27,8 @@ e2e/blob-report/
 .agents/
 skills-lock.json
 
+reports/
+
 *.log
 .DS_Store
 Thumbs.db

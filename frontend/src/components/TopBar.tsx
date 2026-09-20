@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-
-function utcStamp(): string {
-  return new Date().toISOString().replace(".000Z", "Z").slice(0, 19) + "Z";
-}
+import { formatHiveNow } from "../lib/time";
 
 export function TopBar({
   onlineSensors,
@@ -10,6 +7,7 @@ export function TopBar({
   events24h,
   streamUp,
   coord,
+  timezone,
   onLogout,
 }: {
   onlineSensors: number;
@@ -17,14 +15,17 @@ export function TopBar({
   events24h: number;
   streamUp: boolean;
   coord?: string | null;
+  timezone: string;
   onLogout: () => void;
 }) {
-  const [clock, setClock] = useState(utcStamp);
+  const [clock, setClock] = useState(() => formatHiveNow(timezone));
 
   useEffect(() => {
-    const id = window.setInterval(() => setClock(utcStamp()), 1000);
+    const tick = () => setClock(formatHiveNow(timezone));
+    tick();
+    const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [timezone]);
 
   return (
     <header

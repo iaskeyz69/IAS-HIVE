@@ -61,6 +61,7 @@ export default function App() {
         events24h={data.events24h}
         streamUp={data.streamUp}
         coord={coord}
+        timezone={data.timezone}
         onLogout={onAuthFail}
       />
       <main className="relative min-h-0 flex-1 overflow-hidden bg-[#05060a]">
@@ -82,6 +83,21 @@ export default function App() {
             typeCounts={data.typeCounts}
             eventType={data.eventType}
             onEventType={data.setEventType}
+            timezone={data.timezone}
+            timeWindow={data.timeWindow}
+            onTimeWindow={data.setTimeWindow}
+            srcIp={data.srcIp}
+            onSrcIp={data.setSrcIp}
+            country={data.country}
+            onCountry={data.setCountry}
+            dstPort={data.dstPort}
+            onDstPort={data.setDstPort}
+            sessionId={data.sessionId}
+            onSessionId={data.setSessionId}
+            ipCounts={data.ipCounts}
+            countryCounts={data.countryCounts}
+            portCounts={data.portCounts}
+            sessions={data.sessions}
             selectedId={data.selectedEvent?.id ?? null}
             onSelect={data.pickEvent}
           />
@@ -92,6 +108,21 @@ export default function App() {
             typeCounts={data.typeCounts}
             eventType={data.eventType}
             onEventType={data.setEventType}
+            timezone={data.timezone}
+            timeWindow={data.timeWindow}
+            onTimeWindow={data.setTimeWindow}
+            srcIp={data.srcIp}
+            onSrcIp={data.setSrcIp}
+            country={data.country}
+            onCountry={data.setCountry}
+            dstPort={data.dstPort}
+            onDstPort={data.setDstPort}
+            sessionId={data.sessionId}
+            onSessionId={data.setSessionId}
+            ipCounts={data.ipCounts}
+            countryCounts={data.countryCounts}
+            portCounts={data.portCounts}
+            sessions={data.sessions}
           />
         ) : null}
         {view === "config" ? <ConfigView token={token} /> : null}
@@ -156,6 +187,7 @@ export default function App() {
                 events={data.events.slice(0, 80)}
                 selectedId={data.selectedEvent?.id ?? null}
                 onSelect={data.pickEvent}
+                timezone={data.timezone}
               />
             </div>
           </div>
@@ -167,10 +199,16 @@ export default function App() {
           sensorEvents={sensorEvents}
           onClose={data.clearDetail}
           onEvent={data.pickEvent}
+          timezone={data.timezone}
         />
 
         <div data-testid="timeline-dock" className="absolute inset-x-3 bottom-3 z-20">
-          <TimelineScrubber buckets={data.timeline} window={data.timeWindow} onChange={data.setTimeWindow} />
+          <TimelineScrubber
+            buckets={data.timeline}
+            window={data.timeWindow}
+            onChange={data.setTimeWindow}
+            timezone={data.timezone}
+          />
         </div>
       </main>
     </div>

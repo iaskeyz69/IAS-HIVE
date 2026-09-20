@@ -1,5 +1,6 @@
 import { eventTypeColor, eventTypeLabel, severityColor } from "../lib/colors";
 import { eventKind, eventMeta, eventSummary, loginOutcome } from "../lib/eventSummary";
+import { formatHiveClock, formatHiveTime, tzAbbrev } from "../lib/time";
 import { sanitizeDisplay } from "../lib/sanitize";
 import type { HiveEvent, SensorStatus } from "../types";
 
@@ -9,12 +10,14 @@ export function DetailPanel({
   sensorEvents,
   onClose,
   onEvent,
+  timezone,
 }: {
   event: HiveEvent | null;
   sensor: SensorStatus | null;
   sensorEvents: HiveEvent[];
   onClose: () => void;
   onEvent: (event: HiveEvent) => void;
+  timezone: string;
 }) {
   if (!event && !sensor) return null;
 
@@ -29,7 +32,7 @@ export function DetailPanel({
           Close
         </button>
       </div>
-      {event ? <EventDetail event={event} /> : null}
+      {event ? <EventDetail event={event} timezone={timezone} /> : null}
       {sensor && !event ? (
         <div>
           <p data-testid="detail-sensor-label" className="text-hive-ink">
@@ -42,7 +45,7 @@ export function DetailPanel({
             {sensorEvents.slice(0, 12).map((item) => (
               <li key={item.id}>
                 <button type="button" onClick={() => onEvent(item)} className="w-full text-left text-sm text-hive-quiet hover:text-hive-ink">
-                  {item.timestamp.slice(11, 19)} {sanitizeDisplay(item.src_ip)} {eventSummary(item)}
+                  {formatHiveClock(item.timestamp, timezone)} {sanitizeDisplay(item.src_ip)} {eventSummary(item)}
                 </button>
               </li>
             ))}
@@ -53,7 +56,7 @@ export function DetailPanel({
   );
 }
 
-function EventDetail({ event }: { event: HiveEvent }) {
+function EventDetail({ event, timezone }: { event: HiveEvent; timezone: string }) {
   const obj = eventMeta(event);
   const username = String(obj.username ?? "");
   const password = String(obj.password ?? "");
@@ -72,6 +75,7 @@ function EventDetail({ event }: { event: HiveEvent }) {
     ["Event", sanitizeDisplay(kind) || "—"],
     ["What", eventSummary(event)],
     ["Session", sanitizeDisplay(event.session_id) || "—"],
+    [`Time (${tzAbbrev(timezone)})`, formatHiveTime(event.timestamp, timezone)],
     ["UTC", sanitizeDisplay(event.timestamp)],
   ];
   if (username || password) rows.splice(6, 0, ["Credential", sanitizeDisplay(`${username}/${password}`)]);
