@@ -1,0 +1,5 @@
+host,role,user
+dc01.corp.internal,AD,CORP\itadmin
+fs01.corp.internal,file,CORP\itadmin
+hr-pc-04.corp.internal,HR workstation,CORP\amy.tan
+fin-pc-02.corp.internal,Finance,CORP\raj.lee

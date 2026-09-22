@@ -1,0 +1,3 @@
+- rotate guest wifi passphrase (see /srv/share/IT)
+- copy Sep petty cash CSV to Finance share
+- check OpenVPN lease for contractor-07

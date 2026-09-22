@@ -110,6 +110,20 @@ type a new port or bind IP.
 SSH/80/443/RDP and other OpenCanary modules stay off. OpenCanary ports stay on `10.0.20.3`.
 UFW allows Cowrie `2222/tcp` from `10.0.20.0/24`.
 
+Cowrie presents an **office Linux jump host** (`kl-jump-01`). Listings come from
+`sensors/cowrie/fs.pickle`; file bodies from `sensors/cowrie/honeyfs`
+(`/root`, `/home/itadmin`, `/srv/share/{HR,Finance,IT}`). All of that content is
+fiction. Do not copy real keys, VPN profiles, or Hive `.env` into honeyfs.
+Rebuild the pickle after editing honeyfs:
+
+```bash
+docker cp hive-cowrie:/cowrie/cowrie-git/src/cowrie/data/fs.pickle /tmp/fs.pickle.base
+python3 sensors/cowrie/build_fs_pickle.py \
+  --base /tmp/fs.pickle.base \
+  --honeyfs sensors/cowrie/honeyfs \
+  --out sensors/cowrie/fs.pickle
+```
+
 1. Toggle services.
 2. **Save** writes `sensors/opencanary.conf` (`*.enabled` only) and `/data/bait.json` (Cowrie flag).
 3. **Apply** talks to Docker over `/var/run/docker.sock`: start/stop `hive-cowrie`, restart `hive-opencanary` so it reloads the bind-mounted conf.

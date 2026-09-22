@@ -12,6 +12,9 @@ services:
       - "10.0.20.3:2222:2222"
     volumes:
       - ./data/logs/cowrie-01:/cowrie/cowrie-git/var/log/cowrie
+      - ./sensors/cowrie/honeyfs:/cowrie/honeyfs:ro
+      - ./sensors/cowrie/fs.pickle:/cowrie/custom/fs.pickle:ro
+      - ./sensors/cowrie/cowrie.cfg:/cowrie/cowrie-git/etc/cowrie.cfg:ro
     networks:
       - hive_bait
 

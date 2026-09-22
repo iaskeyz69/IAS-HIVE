@@ -1,0 +1,12 @@
+127.0.0.1	localhost
+127.0.1.1	kl-jump-01
+
+# Internal (fiction — bait only)
+10.20.7.10	dc01.corp.internal
+10.20.7.20	fs01.corp.internal
+10.20.7.30	vpn.corp.internal
+10.20.7.50	hr-share.corp.internal
+
+::1     localhost ip6-localhost ip6-loopback
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters

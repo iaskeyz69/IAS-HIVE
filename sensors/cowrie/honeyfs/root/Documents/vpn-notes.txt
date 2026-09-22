@@ -1,0 +1,14 @@
+KL Office jump — notes (draft)
+
+VPN concentrator: vpn.corp.internal (10.20.7.30)
+Profile: /home/itadmin/Documents/VPN/KL-Office.ovpn
+Auth file: same folder, auth.txt  (do not commit)
+
+Staff drop box: /srv/share
+  HR       — roster + leave
+  Finance  — petty cash + vendor list
+  IT       — wifi guest + vpn roster
+
+RDP jump (after VPN):
+  dc01.corp.internal
+  fs01.corp.internal
