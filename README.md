@@ -1,14 +1,14 @@
 # IAS Hive — Honeypot Command Center
 
 Self-hosted dashboard for Cowrie and OpenCanary telemetry. The management
-stack tails sensor JSON logs, normalizes events, and draws them on a dark HUD.
+stack tails sensor JSON logs, normalizes events, and draws them on a dark console.
 Bait listeners are a **separate** compose project (`docker-compose.sensors.yml`).
 Hive does not invent new listen ports; Config only toggles that fixed catalog.
 
 ## What you get
 
 - FastAPI backend: JSONL tailers, MaxMind GeoLite2 (offline), SQLite, REST, WebSocket
-- React HUD: Mapbox globe / 2D, table, stats, live feed, timeline, **Config**
+- React console: Map, Globe, Table, Stats, and Config. The live feed, sensor rail, and timeline stay on the map and globe. A hit opens in a side sheet.
 - Management compose on `hive_mgmt`; bait compose on `hive_bait`
 - Event retention **30 days** (`HIVE_RETENTION_DAYS`)
 
@@ -95,7 +95,7 @@ For local Vite (no Docker), also copy `frontend/.env.example` → `frontend/.env
 
 ## Config (bait toggles)
 
-**Config** on the HUD enables or disables the existing catalog only. You cannot
+**Config** enables or disables the existing catalog only. You cannot
 type a new port or bind IP.
 
 | Id | Sensor | Host port |
@@ -192,7 +192,7 @@ npm run dev
 Vite proxies `/api` and `/ws` to `127.0.0.1:8000`. Config → Apply still needs
 a Docker socket the API user can open.
 
-Live HUD tests (Playwright) live in `e2e/`. They need `HIVE_USER`,
+Live dashboard tests (Playwright) live in `e2e/`. They need `HIVE_USER`,
 `HIVE_PASSWORD`, and a running dashboard. `HIVE_BASE_URL` defaults to
 `http://10.0.20.3:8443`.
 
@@ -202,8 +202,8 @@ Live HUD tests (Playwright) live in `e2e/`. They need `HIVE_USER`,
 |--------|------|---------|
 | GET | `/api/health` | Process + GeoIP + demo flag |
 | GET | `/api/sensors` | Configured sensors + online/offline |
-| GET | `/api/events` | Paginated/filterable history |
-| GET | `/api/stats` | Countries, ports, time series, protocols |
+| GET | `/api/events` | Paginated history. Filters: `sensor_id`, `src_ip`, `src_country`, `dst_port`, `session_id`, `protocol`, `severity`, `event_type`, `q`, `from`, `to`, `limit`, `offset` |
+| GET | `/api/stats` | Countries, ports, time series, protocols, and facet lists. Same time and facet filters as events, without `q` / `protocol` / `severity` |
 | GET | `/api/timeline?hours=1` | Minute buckets for the scrubber |
 | GET | `/api/summary` | 24h count |
 | GET | `/api/bait` | Allowlisted bait toggles + running state |
@@ -252,7 +252,7 @@ already limits `:8443` to `10.0.20.0/24`. Do not add
 
 ```
 backend/                      FastAPI, tailers, GeoIP, SQLite, bait apply
-frontend/                     React + Vite + Tailwind + Mapbox GL
+frontend/                     React + Vite + Tailwind + shadcn + Mapbox GL
 nginx/                        SPA + /api + /ws reverse proxy
 docker-compose.yml            hive-api + hive-ui
 docker-compose.sensors.yml    hive-cowrie + hive-opencanary
@@ -261,5 +261,5 @@ sensors/opencanary.conf       OpenCanary modules (enabled flags only from Config
 data/logs/                    bind-mount target for sensor JSONL
 data/geoip/                   GeoLite2-City.mmdb + GeoLite2-ASN.mmdb
 data/db/                      hive.sqlite + bait.json
-e2e/                          Playwright against the live HUD
+e2e/                          Playwright against the live dashboard
 ```

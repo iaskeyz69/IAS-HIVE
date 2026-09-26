@@ -32,7 +32,7 @@ def is_private_ip(ip: str) -> bool:
 
 
 def near_sensor(ip: str, sensor_lat: float, sensor_lon: float) -> tuple[float, float]:
-    """Place unresolved / LAN sources a short hop from the sensor so the HUD can draw."""
+    """Place unresolved / LAN sources a short hop from the sensor so the map can draw."""
     digest = hashlib.md5((ip or "unknown").encode("utf-8")).hexdigest()
     seed = int(digest[:8], 16)
     angle = (seed % 360) * math.pi / 180.0
