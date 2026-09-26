@@ -6,7 +6,8 @@ import { openEventSocket } from "../lib/ws";
 import type { EventType, HiveEvent, LiveArc, SensorStatus, StatsPayload, TimelineBucket, TimeWindow } from "../types";
 
 const ARC_CAP = 200;
-const EVENT_CAP = 2000;
+const LIVE_CAP = 200;
+const PAGE_SIZE = 100;
 const ARC_TTL_MS = 8000;
 
 function isEvent(value: unknown): value is HiveEvent {
@@ -30,10 +31,36 @@ function countBy(events: HiveEvent[], key: (event: HiveEvent) => string): Record
   return counts;
 }
 
+function matchesLive(
+  event: HiveEvent,
+  opts: {
+    sensorId: string | null;
+    eventType: EventType | null;
+    srcIp: string | null;
+    country: string | null;
+    dstPort: number | null;
+    sessionId: string | null;
+    timeWindow: TimeWindow | null;
+  },
+): boolean {
+  return (
+    (!opts.sensorId || event.sensor_id === opts.sensorId) &&
+    inWindow(event, opts.timeWindow) &&
+    (!opts.eventType || event.event_type === opts.eventType) &&
+    (!opts.srcIp || event.src_ip === opts.srcIp) &&
+    (!opts.country || event.src_country === opts.country) &&
+    (opts.dstPort == null || event.dst_port === opts.dstPort) &&
+    (!opts.sessionId || event.session_id === opts.sessionId)
+  );
+}
+
 export function useHiveData(token: string | null, onAuthFail: () => void) {
   const [sensors, setSensors] = useState<SensorStatus[]>([]);
-  const [catalog, setCatalog] = useState<HiveEvent[]>([]);
-  const [events, setEvents] = useState<HiveEvent[]>([]);
+  const [liveEvents, setLiveEvents] = useState<HiveEvent[]>([]);
+  const [tableEvents, setTableEvents] = useState<HiveEvent[]>([]);
+  const [tableTotal, setTableTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [tableQuery, setTableQuery] = useState("");
   const [arcs, setArcs] = useState<LiveArc[]>([]);
   const [timeline, setTimeline] = useState<TimelineBucket[]>([]);
   const [stats, setStats] = useState<StatsPayload | null>(null);
@@ -57,44 +84,81 @@ export function useHiveData(token: string | null, onAuthFail: () => void) {
     [onAuthFail],
   );
 
-  const refresh = useCallback(async () => {
+  const eventQuery = useMemo(
+    () => ({
+      sensorId,
+      window: timeWindow,
+      srcIp,
+      country,
+      dstPort,
+      sessionId,
+      eventType,
+    }),
+    [sensorId, timeWindow, srcIp, country, dstPort, sessionId, eventType],
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [sensorId, eventType, srcIp, country, dstPort, sessionId, timeWindow, tableQuery]);
+
+  const refreshMeta = useCallback(async () => {
     if (!token) return;
     try {
-      const [sensorRows, eventPage, focusedPage, buckets, summary, health] = await Promise.all([
+      const [sensorRows, livePage, buckets, summary, health, statsRow] = await Promise.all([
         api.sensors(token),
-        api.events(token, { sensorId, window: timeWindow, limit: 400 }),
-        srcIp
-          ? api.events(token, { sensorId, window: timeWindow, srcIp, limit: 400 })
-          : Promise.resolve(null),
+        api.events(token, { ...eventQuery, limit: LIVE_CAP, offset: 0 }),
         api.timeline(token, 1, sensorId),
         api.summary(token),
         api.health(token),
+        api.stats(token, sensorId, timeWindow, eventType, srcIp, country, dstPort, sessionId),
       ]);
       setSensors(sensorRows);
-      setCatalog(eventPage.events);
-      setEvents(focusedPage ? focusedPage.events : eventPage.events);
+      setLiveEvents(livePage.events);
       setTimeline(buckets);
       setEvents24h(summary.events_24h);
+      setStats(statsRow);
       if (health.timezone) setTimezone(health.timezone);
     } catch (err) {
       handleFail(err);
     }
-  }, [token, sensorId, timeWindow, srcIp, handleFail]);
+  }, [token, eventQuery, sensorId, timeWindow, eventType, srcIp, country, dstPort, sessionId, handleFail]);
+
+  const refreshTable = useCallback(async () => {
+    if (!token) return;
+    try {
+      const tablePage = await api.events(token, {
+        ...eventQuery,
+        q: tableQuery.trim() || undefined,
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
+      });
+      setTableEvents(tablePage.events);
+      setTableTotal(tablePage.total);
+    } catch (err) {
+      handleFail(err);
+    }
+  }, [token, eventQuery, tableQuery, page, handleFail]);
 
   const refreshStats = useCallback(async () => {
     if (!token) return;
     try {
-      setStats(await api.stats(token, sensorId, timeWindow, eventType, srcIp));
+      setStats(await api.stats(token, sensorId, timeWindow, eventType, srcIp, country, dstPort, sessionId));
     } catch (err) {
       handleFail(err);
     }
-  }, [token, sensorId, timeWindow, eventType, srcIp, handleFail]);
+  }, [token, sensorId, timeWindow, eventType, srcIp, country, dstPort, sessionId, handleFail]);
 
   useEffect(() => {
-    void refresh();
-    const id = window.setInterval(() => void refresh(), 30000);
+    void refreshMeta();
+    const id = window.setInterval(() => void refreshMeta(), 30000);
     return () => window.clearInterval(id);
-  }, [refresh]);
+  }, [refreshMeta]);
+
+  useEffect(() => {
+    void refreshTable();
+    const id = window.setInterval(() => void refreshTable(), 30000);
+    return () => window.clearInterval(id);
+  }, [refreshTable]);
 
   useEffect(() => {
     void refreshStats();
@@ -107,15 +171,29 @@ export function useHiveData(token: string | null, onAuthFail: () => void) {
       (data) => {
         if (!isEvent(data)) return;
         setEvents24h((n) => n + 1);
-        setCatalog((prev) => [data, ...prev.filter((e) => e.id !== data.id)].slice(0, EVENT_CAP));
-        setEvents((prev) => [data, ...prev.filter((e) => e.id !== data.id)].slice(0, EVENT_CAP));
+        const keep = matchesLive(data, {
+          sensorId,
+          eventType,
+          srcIp,
+          country,
+          dstPort,
+          sessionId,
+          timeWindow,
+        });
+        if (keep) {
+          setLiveEvents((prev) => [data, ...prev.filter((e) => e.id !== data.id)].slice(0, LIVE_CAP));
+          if (page === 0 && !tableQuery.trim()) {
+            setTableEvents((prev) => [data, ...prev.filter((e) => e.id !== data.id)].slice(0, PAGE_SIZE));
+            setTableTotal((n) => n + 1);
+          }
+        }
         setArcs((prev) => [{ ...data, bornAt: Date.now() }, ...prev].slice(0, ARC_CAP));
       },
       () => setStreamUp(false),
       () => setStreamUp(true),
     );
     return close;
-  }, [token]);
+  }, [token, sensorId, eventType, srcIp, country, dstPort, sessionId, timeWindow, page, tableQuery]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -126,53 +204,42 @@ export function useHiveData(token: string | null, onAuthFail: () => void) {
   }, []);
 
   const scoped = useMemo(
-    () => catalog.filter((e) => (!sensorId || e.sensor_id === sensorId) && inWindow(e, timeWindow)),
-    [catalog, sensorId, timeWindow],
-  );
-
-  const working = useMemo(
-    () => (srcIp ? events : catalog).filter((e) => (!sensorId || e.sensor_id === sensorId) && inWindow(e, timeWindow)),
-    [srcIp, events, catalog, sensorId, timeWindow],
-  );
-
-  const filteredEvents = useMemo(
-    () =>
-      working.filter(
-        (e) =>
-          (!eventType || e.event_type === eventType) &&
-          (!srcIp || e.src_ip === srcIp) &&
-          (!country || e.src_country === country) &&
-          (dstPort == null || e.dst_port === dstPort) &&
-          (!sessionId || e.session_id === sessionId),
-      ),
-    [working, eventType, srcIp, country, dstPort, sessionId],
+    () => liveEvents.filter((e) => (!sensorId || e.sensor_id === sensorId) && inWindow(e, timeWindow)),
+    [liveEvents, sensorId, timeWindow],
   );
 
   const typeCounts = useMemo(() => {
     const counts: Record<string, number> = Object.fromEntries(EVENT_TYPES.map((id) => [id, 0]));
-    for (const event of scoped) counts[event.event_type] = (counts[event.event_type] ?? 0) + 1;
+    const rows = stats?.type_totals?.length ? stats.type_totals : (stats?.by_type ?? []);
+    for (const row of rows) counts[row.name] = row.count;
     return counts;
-  }, [scoped]);
+  }, [stats]);
 
-  const ipCounts = useMemo(() => countBy(scoped, (e) => e.src_ip), [scoped]);
-  const countryCounts = useMemo(() => countBy(scoped, (e) => e.src_country || "UNK"), [scoped]);
-  const portCounts = useMemo(() => countBy(scoped, (e) => String(e.dst_port)), [scoped]);
-  const sessions = useMemo(
-    () => [...new Set(scoped.map((e) => e.session_id).filter(Boolean))].slice(0, 80),
-    [scoped],
-  );
+  const ipCounts = useMemo(() => {
+    if (stats?.facet_ips?.length) return Object.fromEntries(stats.facet_ips.map((row) => [row.name, row.count]));
+    return countBy(scoped, (e) => e.src_ip);
+  }, [stats, scoped]);
+  const countryCounts = useMemo(() => {
+    if (stats?.facet_countries?.length) {
+      return Object.fromEntries(stats.facet_countries.map((row) => [row.name, row.count]));
+    }
+    return countBy(scoped, (e) => e.src_country || "UNK");
+  }, [stats, scoped]);
+  const portCounts = useMemo(() => {
+    if (stats?.facet_ports?.length) {
+      return Object.fromEntries(stats.facet_ports.map((row) => [String(row.port), row.count]));
+    }
+    return countBy(scoped, (e) => String(e.dst_port));
+  }, [stats, scoped]);
+  const sessions = useMemo(() => {
+    if (stats?.facet_sessions?.length) return stats.facet_sessions;
+    return [...new Set(scoped.map((e) => e.session_id).filter(Boolean))].slice(0, 80);
+  }, [stats, scoped]);
 
   const filteredArcs = useMemo(
     () =>
-      arcs.filter(
-        (e) =>
-          (!sensorId || e.sensor_id === sensorId) &&
-          inWindow(e, timeWindow) &&
-          (!eventType || e.event_type === eventType) &&
-          (!srcIp || e.src_ip === srcIp) &&
-          (!country || e.src_country === country) &&
-          (dstPort == null || e.dst_port === dstPort) &&
-          (!sessionId || e.session_id === sessionId),
+      arcs.filter((e) =>
+        matchesLive(e, { sensorId, eventType, srcIp, country, dstPort, sessionId, timeWindow }),
       ),
     [arcs, sensorId, timeWindow, eventType, srcIp, country, dstPort, sessionId],
   );
@@ -188,9 +255,19 @@ export function useHiveData(token: string | null, onAuthFail: () => void) {
     setSelectedSensor(sensors.find((s) => s.id === event.sensor_id) ?? null);
   };
 
+  const pageCount = tableTotal === 0 ? 1 : Math.ceil(tableTotal / PAGE_SIZE);
+
   return {
     sensors,
-    events: filteredEvents,
+    events: liveEvents,
+    tableEvents,
+    tableTotal,
+    page,
+    pageSize: PAGE_SIZE,
+    pageCount,
+    setPage,
+    tableQuery,
+    setTableQuery,
     arcs: filteredArcs,
     timeline,
     stats,

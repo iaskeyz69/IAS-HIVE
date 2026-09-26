@@ -18,7 +18,7 @@ export function SensorList({
           data-testid="sensor-all"
           onClick={() => onSelect(null)}
           className={`flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-sm ${
-            selectedId === null ? "bg-hive-bg text-hive-cyan" : "text-hive-quiet hover:text-hive-ink"
+            selectedId === null ? "bg-white/10 text-foreground" : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <span>All sensors</span>
@@ -33,12 +33,12 @@ export function SensorList({
             data-sensor-id={sensor.id}
             onClick={() => onSelect(sensor.id === selectedId ? null : sensor.id)}
             className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm ${
-              selectedId === sensor.id ? "bg-hive-bg text-hive-cyan" : "hover:bg-hive-bg"
+              selectedId === sensor.id ? "bg-white/10 text-foreground" : "hover:bg-white/5"
             }`}
           >
-            <span className={`h-2 w-2 shrink-0 rounded-full ${sensor.online ? "bg-hive-blue" : "bg-hive-sting"}`} />
+            <span className={`h-2 w-2 shrink-0 rounded-full ${sensor.online ? "bg-hive-rec" : "bg-hive-sting"}`} />
             <span className="flex-1 truncate">{sanitizeDisplay(sensor.label)}</span>
-            <span className="text-hive-quiet">{sanitizeDisplay(sensor.type)}</span>
+            <span className="text-muted-foreground">{sanitizeDisplay(sensor.type)}</span>
           </button>
         </li>
       ))}

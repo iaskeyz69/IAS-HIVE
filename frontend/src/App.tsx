@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { DetailPanel } from "./components/DetailPanel";
 import { EventFeed } from "./components/EventFeed";
-import { HudFrame } from "./components/HudFrame";
 import { Login } from "./components/Login";
 import { SensorList } from "./components/SensorList";
 import { TimelineScrubber } from "./components/TimelineScrubber";
 import { TopBar } from "./components/TopBar";
 import { BasemapToggle } from "./components/BasemapToggle";
 import { TypeFilter } from "./components/TypeFilter";
-import { ViewToggle } from "./components/ViewToggle";
 import { useHiveData } from "./hooks/useHiveData";
 import { clearAuth, loadAuth } from "./lib/auth";
 import type { BasemapId, ViewId } from "./types";
@@ -16,6 +14,7 @@ import { MapboxView } from "./views/MapboxView";
 import { StatsView } from "./views/StatsView";
 import { ConfigView } from "./views/ConfigView";
 import { TableView } from "./views/TableView";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 function formatCoord(lat: number | null | undefined, lon: number | null | undefined): string | null {
   if (lat == null || lon == null) return null;
@@ -53,8 +52,7 @@ export default function App() {
   );
 
   return (
-    <div className="relative flex h-full flex-col bg-hive-bg text-hive-ink">
-      <HudFrame />
+    <div className="relative flex h-full flex-col bg-background text-foreground">
       <TopBar
         onlineSensors={online}
         totalSensors={data.sensors.length}
@@ -62,9 +60,11 @@ export default function App() {
         streamUp={data.streamUp}
         coord={coord}
         timezone={data.timezone}
+        view={view}
+        onView={setView}
         onLogout={onAuthFail}
       />
-      <main className="relative min-h-0 flex-1 overflow-hidden bg-[#05060a]">
+      <main className="relative min-h-0 flex-1 overflow-hidden bg-[#0b0b0b]">
         {showMap ? (
           <MapboxView
             mode={view === "map3d" ? "3d" : "2d"}
@@ -79,7 +79,7 @@ export default function App() {
         ) : null}
         {view === "table" ? (
           <TableView
-            events={data.events}
+            events={data.tableEvents}
             typeCounts={data.typeCounts}
             eventType={data.eventType}
             onEventType={data.setEventType}
@@ -98,8 +98,16 @@ export default function App() {
             countryCounts={data.countryCounts}
             portCounts={data.portCounts}
             sessions={data.sessions}
+            search={data.tableQuery}
+            onSearch={data.setTableQuery}
             selectedId={data.selectedEvent?.id ?? null}
             onSelect={data.pickEvent}
+            page={data.page}
+            pageCount={data.pageCount}
+            pageSize={data.pageSize}
+            total={data.tableTotal}
+            onPage={data.setPage}
+            detailOpen={Boolean(data.selectedEvent || data.selectedSensor)}
           />
         ) : null}
         {view === "stats" ? (
@@ -123,74 +131,78 @@ export default function App() {
             countryCounts={data.countryCounts}
             portCounts={data.portCounts}
             sessions={data.sessions}
+            detailOpen={Boolean(data.selectedEvent || data.selectedSensor)}
           />
         ) : null}
-        {view === "config" ? <ConfigView token={token} /> : null}
-
-        <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
-          {showMap ? <BasemapToggle value={basemap} onChange={setBasemap} /> : null}
-          <ViewToggle view={view} onChange={setView} />
-        </div>
-
-        <aside
-          data-testid="left-rail"
-          className="absolute left-3 top-14 z-20 flex w-72 max-h-[60%] flex-col gap-3 overflow-auto"
-        >
-          <section data-testid="connection-card" className="hive-float rounded-card p-3">
-            <p className="font-mono text-[11px] tracking-wide text-hive-quiet">Connection</p>
-            <div className="mt-2 flex items-center justify-between text-sm">
-              <span>Stream</span>
-              <span className={data.streamUp ? "font-mono text-hive-rec" : "font-mono text-hive-sting"}>
-                {data.streamUp ? "Live" : "Down"}
-              </span>
-            </div>
-            <div className="mt-1 flex items-center justify-between text-sm">
-              <span>Sensors</span>
-              <span className="font-mono text-hive-quiet">
-                {online}/{data.sensors.length} online
-              </span>
-            </div>
-          </section>
-          {showMap ? (
-            <section className="hive-float rounded-card p-3">
-              <p className="mb-2 font-mono text-[11px] tracking-wide text-hive-quiet">Kill chain</p>
-              <TypeFilter value={data.eventType} counts={data.typeCounts} onChange={data.setEventType} />
-            </section>
-          ) : null}
-          <section data-testid="sensor-rail" className="hive-float rounded-card p-3">
-            <p className="font-mono text-[11px] tracking-wide text-hive-quiet">Sensors</p>
-            <SensorList
-              sensors={data.sensors}
-              selectedId={data.sensorId}
-              onSelect={(id) => {
-                const match = data.sensors.find((s) => s.id === id) ?? null;
-                if (match) data.pickSensor(match);
-                else {
-                  data.setSensorId(null);
-                  data.clearDetail();
-                }
-              }}
-            />
-          </section>
-        </aside>
+        {view === "config" ? (
+          <ConfigView token={token} detailOpen={Boolean(data.selectedEvent || data.selectedSensor)} />
+        ) : null}
 
         {showMap ? (
-          <div
-            data-testid="live-card"
-            className="hive-float absolute right-3 top-14 z-20 flex max-h-[58%] w-80 flex-col overflow-hidden rounded-card"
-          >
-            <p className="border-b border-hive-line px-4 py-2.5 font-mono text-[11px] tracking-wide text-hive-quiet">
-              Live
-            </p>
-            <div className="min-h-0 flex-1 overflow-auto">
-              <EventFeed
-                events={data.events.slice(0, 80)}
-                selectedId={data.selectedEvent?.id ?? null}
-                onSelect={data.pickEvent}
+          <>
+            <div className="absolute right-3 top-3 z-30">
+              <BasemapToggle value={basemap} onChange={setBasemap} />
+            </div>
+            <aside
+              data-testid="left-rail"
+              className="absolute bottom-[4.75rem] left-3 top-3 z-20 flex w-72 flex-col gap-3 overflow-auto"
+            >
+              <section data-testid="connection-card" className="hive-glass rounded-xl p-3">
+                <p className="text-sm text-muted-foreground">Connection</p>
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <span>Stream</span>
+                  <span className={data.streamUp ? "text-hive-rec" : "text-hive-sting"}>{data.streamUp ? "Live" : "Down"}</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-sm">
+                  <span>Sensors</span>
+                  <span className="text-muted-foreground">
+                    {online}/{data.sensors.length} online
+                  </span>
+                </div>
+              </section>
+              <section className="hive-glass rounded-xl p-3">
+                <p className="mb-2 text-sm text-muted-foreground">Kill chain</p>
+                <TypeFilter value={data.eventType} counts={data.typeCounts} onChange={data.setEventType} />
+              </section>
+              <section data-testid="sensor-rail" className="hive-glass rounded-xl p-3">
+                <p className="text-sm text-muted-foreground">Sensors</p>
+                <SensorList
+                  sensors={data.sensors}
+                  selectedId={data.sensorId}
+                  onSelect={(id) => {
+                    const match = data.sensors.find((s) => s.id === id) ?? null;
+                    if (match) data.pickSensor(match);
+                    else {
+                      data.setSensorId(null);
+                      data.clearDetail();
+                    }
+                  }}
+                />
+              </section>
+            </aside>
+            <div
+              data-testid="live-card"
+              className="hive-glass absolute bottom-[4.75rem] right-3 top-14 z-20 flex w-80 flex-col overflow-hidden rounded-xl"
+            >
+              <p className="border-b border-white/10 px-4 py-2.5 text-sm text-muted-foreground">Live</p>
+              <ScrollArea className="min-h-0 flex-1">
+                <EventFeed
+                  events={data.events.slice(0, 80)}
+                  selectedId={data.selectedEvent?.id ?? null}
+                  onSelect={data.pickEvent}
+                  timezone={data.timezone}
+                />
+              </ScrollArea>
+            </div>
+            <div data-testid="timeline-dock" className="absolute inset-x-3 bottom-3 z-20">
+              <TimelineScrubber
+                buckets={data.timeline}
+                window={data.timeWindow}
+                onChange={data.setTimeWindow}
                 timezone={data.timezone}
               />
             </div>
-          </div>
+          </>
         ) : null}
 
         <DetailPanel
@@ -201,15 +213,6 @@ export default function App() {
           onEvent={data.pickEvent}
           timezone={data.timezone}
         />
-
-        <div data-testid="timeline-dock" className="absolute inset-x-3 bottom-3 z-20">
-          <TimelineScrubber
-            buckets={data.timeline}
-            window={data.timeWindow}
-            onChange={data.setTimeWindow}
-            timezone={data.timezone}
-          />
-        </div>
       </main>
     </div>
   );

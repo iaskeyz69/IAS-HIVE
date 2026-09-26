@@ -1,4 +1,5 @@
 import type { ViewId } from "../types";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const VIEWS: { id: ViewId; label: string; testid: string }[] = [
   { id: "map2d", label: "Map", testid: "view-map" },
@@ -10,21 +11,14 @@ const VIEWS: { id: ViewId; label: string; testid: string }[] = [
 
 export function ViewToggle({ view, onChange }: { view: ViewId; onChange: (id: ViewId) => void }) {
   return (
-    <div data-testid="view-toggle" className="hive-float flex overflow-hidden rounded-full">
-      {VIEWS.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          data-testid={item.testid}
-          aria-pressed={view === item.id}
-          onClick={() => onChange(item.id)}
-          className={`px-3 py-1.5 font-mono text-xs tracking-wide ${
-            view === item.id ? "bg-hive-cyan text-hive-bg" : "text-hive-quiet hover:text-hive-ink"
-          }`}
-        >
-          {item.label}
-        </button>
-      ))}
-    </div>
+    <Tabs value={view} onValueChange={(next) => onChange(next as ViewId)}>
+      <TabsList data-testid="view-toggle">
+        {VIEWS.map((item) => (
+          <TabsTrigger key={item.id} value={item.id} data-testid={item.testid} aria-pressed={view === item.id}>
+            {item.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }

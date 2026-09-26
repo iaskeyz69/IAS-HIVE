@@ -35,13 +35,13 @@ export function TypeFilter({
             data-testid={`type-filter-${chip.key}`}
             aria-pressed={active}
             onClick={() => onChange(chip.id)}
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[11px] tracking-wide ${
-              active ? "text-hive-bg" : "text-hive-quiet ring-1 ring-hive-line hover:text-hive-ink"
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] ${
+              active ? "text-[#111111]" : "text-muted-foreground ring-1 ring-white/10 hover:text-foreground"
             }`}
             style={active ? { background: accent } : { color: chip.id ? accent : undefined }}
           >
             <span>{chip.label}</span>
-            <span className={active ? "opacity-80" : "text-hive-quiet"}>{count}</span>
+            <span className={active ? "opacity-80" : "text-muted-foreground"}>{count}</span>
           </button>
         );
       })}

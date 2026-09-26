@@ -11,7 +11,8 @@ test("table filter, sort, type chips, and row click work", async ({ page }) => {
   await expect(page.getByTestId("filter-ip")).toBeVisible();
   await expect(page.getByTestId("filter-time-1h")).toBeVisible();
   await expect(page.getByTestId("table-filter")).toBeVisible();
-  await expect(page.getByTestId("timeline")).toBeVisible();
+  await expect(page.getByTestId("table-pager")).toBeVisible();
+  await expect(page.getByTestId("timeline")).toHaveCount(0);
   await page.getByTestId("table-sort-src_ip").click();
   const row = page.getByTestId("table-row").first();
   if (await row.count()) {

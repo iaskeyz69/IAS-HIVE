@@ -46,13 +46,13 @@ export function TimelineScrubber({
   }
 
   return (
-    <div data-testid="timeline" className="hive-float flex h-14 items-center gap-4 rounded-card px-4">
+    <div data-testid="timeline" className="hive-glass flex h-14 items-center gap-4 rounded-xl px-4">
       <div className="w-24 shrink-0">
-        <p className="font-mono text-sm text-hive-ink">Last hour</p>
+        <p className="text-sm text-foreground">Last hour</p>
         <button
           type="button"
           data-testid="timeline-live"
-          className="text-sm text-hive-quiet hover:text-hive-cyan"
+          className="text-sm text-muted-foreground hover:text-foreground"
           onClick={() => onChange(null)}
         >
           {window ? "Clear window" : "Live"}

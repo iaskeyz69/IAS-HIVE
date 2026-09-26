@@ -57,6 +57,9 @@ export const api = {
       severity?: string;
       eventType?: EventType | null;
       srcIp?: string | null;
+      country?: string | null;
+      dstPort?: number | null;
+      sessionId?: string | null;
       limit?: number;
       offset?: number;
     } = {},
@@ -72,6 +75,9 @@ export const api = {
         severity: opts.severity,
         event_type: opts.eventType,
         src_ip: opts.srcIp,
+        src_country: opts.country,
+        dst_port: opts.dstPort,
+        session_id: opts.sessionId,
         limit: opts.limit ?? 200,
         offset: opts.offset ?? 0,
       })}`,
@@ -82,6 +88,9 @@ export const api = {
     window?: TimeWindow | null,
     eventType?: EventType | null,
     srcIp?: string | null,
+    country?: string | null,
+    dstPort?: number | null,
+    sessionId?: string | null,
   ) =>
     request<StatsPayload>(
       token,
@@ -91,6 +100,9 @@ export const api = {
         to: window?.to,
         event_type: eventType,
         src_ip: srcIp,
+        src_country: country,
+        dst_port: dstPort,
+        session_id: sessionId,
       })}`,
     ),
   timeline: (token: string, hours = 1, sensorId?: string | null) =>

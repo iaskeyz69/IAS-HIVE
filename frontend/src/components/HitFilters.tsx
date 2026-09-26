@@ -1,8 +1,12 @@
 import { TIME_PRESETS, formatHiveTime, matchingPreset, presetWindow, toDatetimeLocal, fromDatetimeLocal, tzAbbrev } from "../lib/time";
 import type { TimeWindow } from "../types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const selectClass =
-  "rounded-lg bg-hive-panel px-2 py-1.5 font-mono text-xs text-hive-ink outline-none ring-1 ring-hive-line focus:ring-hive-cyan";
+const ALL = "__all__";
 
 export function HitFilters({
   timezone,
@@ -65,116 +69,159 @@ export function HitFilters({
   if (sessionId) pills.push({ key: "session", label: `Session: ${sessionId}`, clear: () => onSessionId(null) });
   if (search.trim()) pills.push({ key: "q", label: `Contains: ${search.trim()}`, clear: () => onSearch?.("") });
 
+  function clearAll() {
+    onTimeWindow(null);
+    onSrcIp(null);
+    onCountry(null);
+    onDstPort(null);
+    onSessionId(null);
+    onSearch?.("");
+  }
+
   return (
-    <div data-testid="hit-filters" className="flex flex-col gap-2">
+    <div data-testid="hit-filters" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="mr-1 font-mono text-[10px] uppercase tracking-wide text-hive-quiet">Time {abbrev}</span>
+        <span className="mr-1 text-sm text-muted-foreground">Time {abbrev}</span>
         {TIME_PRESETS.map((preset) => (
-          <button
+          <Button
             key={preset.id}
             type="button"
+            size="sm"
+            variant={active === preset.id ? "default" : "outline"}
             data-testid={`filter-time-${preset.id}`}
             aria-pressed={active === preset.id}
             onClick={() => onTimeWindow(presetWindow(preset.minutes))}
-            className={`rounded-full px-2.5 py-1 font-mono text-[11px] ${
-              active === preset.id ? "bg-hive-cyan text-hive-bg" : "text-hive-quiet ring-1 ring-hive-line hover:text-hive-ink"
-            }`}
           >
             {preset.label}
-          </button>
+          </Button>
         ))}
-        <label className="ml-1 flex items-center gap-1 text-[11px] text-hive-quiet">
-          From
-          <input
-            data-testid="filter-time-from"
-            type="datetime-local"
-            value={fromLocal}
-            onChange={(e) => {
-              const from = e.target.value ? fromDatetimeLocal(e.target.value, timezone) : timeWindow?.from;
-              if (!from) return;
-              onTimeWindow({ from, to: timeWindow?.to ?? new Date().toISOString() });
-            }}
-            className={selectClass}
-          />
-        </label>
-        <label className="flex items-center gap-1 text-[11px] text-hive-quiet">
-          To
-          <input
-            data-testid="filter-time-to"
-            type="datetime-local"
-            value={toLocal}
-            onChange={(e) => {
-              const to = e.target.value ? fromDatetimeLocal(e.target.value, timezone) : timeWindow?.to;
-              if (!to) return;
-              onTimeWindow({ from: timeWindow?.from ?? to, to });
-            }}
-            className={selectClass}
-          />
-        </label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button type="button" size="sm" variant={active === "custom" ? "default" : "outline"}>
+              Custom
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="filter-time-from">From</Label>
+                <Input
+                  id="filter-time-from"
+                  data-testid="filter-time-from"
+                  type="datetime-local"
+                  value={fromLocal}
+                  onChange={(e) => {
+                    const from = e.target.value ? fromDatetimeLocal(e.target.value, timezone) : timeWindow?.from;
+                    if (!from) return;
+                    onTimeWindow({ from, to: timeWindow?.to ?? new Date().toISOString() });
+                  }}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="filter-time-to">To</Label>
+                <Input
+                  id="filter-time-to"
+                  data-testid="filter-time-to"
+                  type="datetime-local"
+                  value={toLocal}
+                  onChange={(e) => {
+                    const to = e.target.value ? fromDatetimeLocal(e.target.value, timezone) : timeWindow?.to;
+                    if (!to) return;
+                    onTimeWindow({ from: timeWindow?.from ?? to, to });
+                  }}
+                />
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+        {pills.length ? (
+          <Button type="button" size="sm" variant="ghost" onClick={clearAll}>
+            Clear all
+          </Button>
+        ) : null}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <select
-          data-testid="filter-ip"
-          value={srcIp ?? ""}
-          onChange={(e) => onSrcIp(e.target.value || null)}
-          className={`${selectClass} min-w-[11rem]`}
-        >
-          <option value="">All IPs ({ips.length})</option>
-          {ips.map(([ip, n]) => (
-            <option key={ip} value={ip}>
-              {ip} ({n})
-            </option>
-          ))}
-        </select>
-        <select
-          data-testid="filter-country"
-          value={country ?? ""}
-          onChange={(e) => onCountry(e.target.value || null)}
-          className={`${selectClass} min-w-[8rem]`}
-        >
-          <option value="">All countries</option>
-          {countries.map(([name, n]) => (
-            <option key={name} value={name}>
-              {name} ({n})
-            </option>
-          ))}
-        </select>
-        <select
-          data-testid="filter-port"
-          value={dstPort == null ? "" : String(dstPort)}
-          onChange={(e) => onDstPort(e.target.value ? Number(e.target.value) : null)}
-          className={`${selectClass} min-w-[8rem]`}
-        >
-          <option value="">All ports</option>
-          {ports.map(([port, n]) => (
-            <option key={port} value={port}>
-              {port} ({n})
-            </option>
-          ))}
-        </select>
-        <input
-          data-testid="filter-session"
-          list="hive-sessions"
-          value={sessionId ?? ""}
-          onChange={(e) => onSessionId(e.target.value.trim() || null)}
-          placeholder="Session id"
-          className={`${selectClass} min-w-[10rem]`}
-        />
-        <datalist id="hive-sessions">
-          {sessions.slice(0, 40).map((id) => (
-            <option key={id} value={id} />
-          ))}
-        </datalist>
-        {showSearch ? (
-          <input
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="flex flex-col gap-1.5">
+          <Label>Source IP</Label>
+          <Select value={srcIp ?? ALL} onValueChange={(value) => onSrcIp(value === ALL ? null : value)}>
+            <SelectTrigger data-testid="filter-ip">
+              <SelectValue placeholder="All IPs" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All IPs ({ips.length})</SelectItem>
+              {ips.map(([ip, n]) => (
+                <SelectItem key={ip} value={ip}>
+                  {ip} ({n})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Country</Label>
+          <Select value={country ?? ALL} onValueChange={(value) => onCountry(value === ALL ? null : value)}>
+            <SelectTrigger data-testid="filter-country">
+              <SelectValue placeholder="All countries" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All countries</SelectItem>
+              {countries.map(([name, n]) => (
+                <SelectItem key={name} value={name}>
+                  {name} ({n})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Port</Label>
+          <Select
+            value={dstPort == null ? ALL : String(dstPort)}
+            onValueChange={(value) => onDstPort(value === ALL ? null : Number(value))}
+          >
+            <SelectTrigger data-testid="filter-port">
+              <SelectValue placeholder="All ports" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All ports</SelectItem>
+              {ports.map(([port, n]) => (
+                <SelectItem key={port} value={port}>
+                  {port} ({n})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="filter-session">Session</Label>
+          <Input
+            id="filter-session"
+            data-testid="filter-session"
+            list="hive-sessions"
+            value={sessionId ?? ""}
+            onChange={(e) => onSessionId(e.target.value.trim() || null)}
+            placeholder="Session id"
+            className="font-mono"
+          />
+          <datalist id="hive-sessions">
+            {sessions.slice(0, 40).map((id) => (
+              <option key={id} value={id} />
+            ))}
+          </datalist>
+        </div>
+      </div>
+      {showSearch ? (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="table-filter">Contains</Label>
+          <Input
+            id="table-filter"
             data-testid="table-filter"
             value={search}
             onChange={(e) => onSearch?.(e.target.value)}
-            placeholder="Contains command, credential, banner…"
-            className="min-w-[16rem] flex-1 rounded-lg bg-hive-panel px-3 py-1.5 text-sm text-hive-ink outline-none ring-1 ring-hive-line focus:ring-hive-cyan"
+            placeholder="Command, credential, banner…"
           />
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       {pills.length ? (
         <div data-testid="filter-pills" className="flex flex-wrap gap-1.5">
           {pills.map((pill) => (
@@ -183,7 +230,7 @@ export function HitFilters({
               type="button"
               data-testid={`filter-pill-${pill.key}`}
               onClick={pill.clear}
-              className="inline-flex max-w-full items-center gap-1 rounded-full bg-[rgba(0,212,255,0.12)] px-2.5 py-1 font-mono text-[11px] text-hive-cyan"
+              className="inline-flex max-w-full items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-foreground"
               title="Clear this filter"
             >
               <span className="truncate">{pill.label}</span>

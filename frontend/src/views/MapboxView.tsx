@@ -394,7 +394,7 @@ export function MapboxView({
 
   if (!TOKEN) {
     return (
-      <div data-testid="map-missing-token" className="flex h-full items-center justify-center bg-[#05060a] text-sm text-hive-quiet">
+      <div data-testid="map-missing-token" className="flex h-full items-center justify-center bg-[#0b0b0b] text-sm text-muted-foreground">
         Add a Mapbox token to show the map
       </div>
     );

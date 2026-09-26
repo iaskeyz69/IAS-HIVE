@@ -68,6 +68,11 @@ export interface StatsPayload {
   top_ips: { name: string; count: number }[];
   recent_commands: HitSnippet[];
   recent_payloads: HitSnippet[];
+  type_totals?: { name: string; count: number }[];
+  facet_ips?: { name: string; count: number }[];
+  facet_countries?: { name: string; count: number }[];
+  facet_ports?: { port: number; count: number }[];
+  facet_sessions?: string[];
 }
 
 export interface TimeWindow {

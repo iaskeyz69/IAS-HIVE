@@ -182,6 +182,15 @@ def _filter_sql(filters: EventFilters) -> tuple[str, list]:
     if filters.event_type:
         clauses.append("event_type = ?")
         params.append(filters.event_type)
+    if filters.src_country:
+        clauses.append("src_country = ?")
+        params.append(filters.src_country)
+    if filters.dst_port is not None:
+        clauses.append("dst_port = ?")
+        params.append(filters.dst_port)
+    if filters.session_id:
+        clauses.append("session_id = ?")
+        params.append(filters.session_id)
     if filters.time_from:
         clauses.append("timestamp >= ?")
         params.append(filters.time_from)
@@ -326,16 +335,24 @@ async def stats(
     sensor_id: str | None = None,
     event_type: str | None = None,
     src_ip: str | None = None,
+    src_country: str | None = None,
+    dst_port: int | None = None,
+    session_id: str | None = None,
 ) -> StatsPayload:
     filters = EventFilters(
         sensor_id=sensor_id,
         event_type=event_type,
         src_ip=src_ip,
+        src_country=src_country,
+        dst_port=dst_port,
+        session_id=session_id,
         time_from=time_from,
         time_to=time_to,
         limit=1,
     )
     where, params = _filter_sql(filters)
+    census_filters = filters.model_copy(update={"event_type": None})
+    census_where, census_params = _filter_sql(census_filters)
     since_24h = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     conn = await connect()
     try:
@@ -344,17 +361,26 @@ async def stats(
         )
         events_24h = int((await cur.fetchone())["n"])
 
-        async def grouped(column: str, limit: int = 8, extra: str = "") -> list[tuple[str, int]]:
-            clause = _and_where(where, extra) if extra else where
+        async def grouped(
+            column: str,
+            limit: int = 8,
+            extra: str = "",
+            *,
+            clause: str | None = None,
+            bind: list | None = None,
+        ) -> list[tuple[str, int]]:
+            use_where = where if clause is None else clause
+            use_params = params if bind is None else bind
+            sql_where = _and_where(use_where, extra) if extra else use_where
             cur_g = await conn.execute(
                 f"""
                 SELECT {column} AS name, COUNT(*) AS n
-                FROM events {clause}
+                FROM events {sql_where}
                 GROUP BY {column}
                 ORDER BY n DESC
                 LIMIT ?
                 """,
-                [*params, limit],
+                [*use_params, limit],
             )
             return [(row["name"] or "UNK", int(row["n"])) for row in await cur_g.fetchall()]
 
@@ -377,6 +403,34 @@ async def stats(
         login_fail = await scalar(f"SELECT COUNT(*) AS n FROM events {login_fail_where}")
 
         by_type = await grouped("event_type", 8)
+        TYPE_KEYS = ("scan", "login_attempt", "command", "payload")
+        type_map = dict(await grouped("event_type", 8, clause=census_where, bind=census_params))
+        type_totals = [(key, int(type_map.get(key, 0))) for key in TYPE_KEYS]
+        facet_ips = await grouped("src_ip", 250, clause=census_where, bind=census_params)
+        facet_countries = await grouped("src_country", 80, clause=census_where, bind=census_params)
+        cur = await conn.execute(
+            f"""
+            SELECT dst_port AS port, COUNT(*) AS n
+            FROM events {census_where}
+            GROUP BY dst_port
+            ORDER BY n DESC
+            LIMIT 40
+            """,
+            census_params,
+        )
+        facet_ports = [(int(row["port"] or 0), int(row["n"])) for row in await cur.fetchall()]
+        sess_clause = _and_where(census_where, "session_id != ''")
+        cur = await conn.execute(
+            f"""
+            SELECT session_id AS name, COUNT(*) AS n
+            FROM events {sess_clause}
+            GROUP BY session_id
+            ORDER BY MAX(timestamp) DESC
+            LIMIT 80
+            """,
+            census_params,
+        )
+        facet_sessions = [row["name"] for row in await cur.fetchall() if row["name"]]
         countries = await grouped("src_country", 8, "src_country != 'LAN'")
         protocols = await grouped("protocol")
         top_ips = await grouped("src_ip", 8)
@@ -478,6 +532,11 @@ async def stats(
         top_ips=[NamedCount(name=n, count=c) for n, c in top_ips],
         recent_commands=recent_commands,
         recent_payloads=recent_payloads,
+        type_totals=[NamedCount(name=n, count=c) for n, c in type_totals],
+        facet_ips=[NamedCount(name=n, count=c) for n, c in facet_ips],
+        facet_countries=[NamedCount(name=n, count=c) for n, c in facet_countries],
+        facet_ports=[PortCount(port=p, count=c) for p, c in facet_ports],
+        facet_sessions=facet_sessions,
     )
 
 

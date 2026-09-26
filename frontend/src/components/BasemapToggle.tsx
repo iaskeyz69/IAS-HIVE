@@ -13,7 +13,7 @@ export function BasemapToggle({
   onChange: (id: BasemapId) => void;
 }) {
   return (
-    <div data-testid="basemap-toggle" className="hive-float flex overflow-hidden rounded-full">
+    <div data-testid="basemap-toggle" className="hive-glass flex overflow-hidden rounded-full p-1">
       {MODES.map((item) => (
         <button
           key={item.id}
@@ -21,12 +21,8 @@ export function BasemapToggle({
           data-testid={item.testid}
           aria-pressed={value === item.id}
           onClick={() => onChange(item.id)}
-          className={`px-3 py-1.5 font-mono text-xs tracking-wide ${
-            value === item.id
-              ? item.id === "normal"
-                ? "bg-[#00E676] text-black"
-                : "bg-hive-cyan text-hive-bg"
-              : "text-hive-quiet hover:text-hive-ink"
+          className={`rounded-full px-3 py-1 text-sm ${
+            value === item.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
           }`}
         >
           {item.label}

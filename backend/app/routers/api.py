@@ -78,6 +78,9 @@ def build_router(book: SensorBook) -> APIRouter:
         protocol: str | None = None,
         severity: str | None = None,
         event_type: str | None = None,
+        src_country: str | None = None,
+        dst_port: int | None = None,
+        session_id: str | None = None,
         time_from: str | None = Query(default=None, alias="from"),
         time_to: str | None = Query(default=None, alias="to"),
         q: str | None = None,
@@ -90,6 +93,9 @@ def build_router(book: SensorBook) -> APIRouter:
             protocol=protocol,
             severity=severity,
             event_type=event_type,
+            src_country=src_country,
+            dst_port=dst_port,
+            session_id=session_id,
             time_from=time_from,
             time_to=time_to,
             q=q,
@@ -104,6 +110,9 @@ def build_router(book: SensorBook) -> APIRouter:
         sensor_id: str | None = None,
         event_type: str | None = None,
         src_ip: str | None = None,
+        src_country: str | None = None,
+        dst_port: int | None = None,
+        session_id: str | None = None,
         time_from: str | None = Query(default=None, alias="from"),
         time_to: str | None = Query(default=None, alias="to"),
     ) -> StatsPayload:
@@ -113,6 +122,9 @@ def build_router(book: SensorBook) -> APIRouter:
             sensor_id=sensor_id,
             event_type=event_type,
             src_ip=src_ip,
+            src_country=src_country,
+            dst_port=dst_port,
+            session_id=session_id,
         )
 
     @api.get("/timeline", response_model=list[TimelineBucket])

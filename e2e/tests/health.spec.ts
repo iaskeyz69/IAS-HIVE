@@ -13,9 +13,16 @@ test("no page errors and floating chrome is opaque", async ({ page }) => {
   await expect(page.getByTestId("live-card")).toBeVisible();
   await expect(page.getByTestId("timeline")).toBeVisible();
 
-  for (const id of ["live-card", "view-toggle", "timeline"]) {
-    const color = await page.getByTestId(id).evaluate((el) => getComputedStyle(el).backgroundColor);
-    expect(isOpaqueColor(color), `${id} background ${color}`).toBeTruthy();
+  const toggleBg = await page.getByTestId("view-toggle").evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(isOpaqueColor(toggleBg), `view-toggle background ${toggleBg}`).toBeTruthy();
+
+  for (const id of ["live-card", "timeline"]) {
+    const paint = await page.getByTestId(id).evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { bg: style.backgroundColor, blur: style.backdropFilter || "" };
+    });
+    const frosted = paint.blur !== "none" && paint.blur !== "";
+    expect(frosted || isOpaqueColor(paint.bg), `${id} background ${paint.bg} blur ${paint.blur}`).toBeTruthy();
   }
 
   expect(pageErrors, pageErrors.join("\n")).toEqual([]);

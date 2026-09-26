@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { formatHiveNow } from "../lib/time";
+import type { ViewId } from "../types";
+import { Button } from "@/components/ui/button";
+import { ViewToggle } from "./ViewToggle";
 
 export function TopBar({
   onlineSensors,
@@ -8,6 +11,8 @@ export function TopBar({
   streamUp,
   coord,
   timezone,
+  view,
+  onView,
   onLogout,
 }: {
   onlineSensors: number;
@@ -16,6 +21,8 @@ export function TopBar({
   streamUp: boolean;
   coord?: string | null;
   timezone: string;
+  view: ViewId;
+  onView: (id: ViewId) => void;
   onLogout: () => void;
 }) {
   const [clock, setClock] = useState(() => formatHiveNow(timezone));
@@ -30,37 +37,32 @@ export function TopBar({
   return (
     <header
       data-testid="topbar"
-      className="relative z-50 flex h-12 shrink-0 items-center justify-between border-b border-hive-line bg-hive-bg/95 px-5"
+      className="relative z-50 flex h-14 shrink-0 items-center gap-4 border-b border-white/10 bg-background px-4"
     >
-      <div className="flex items-center gap-4">
-        <p className="font-mono text-sm font-semibold tracking-[0.28em] text-hive-cyan">HIVE</p>
-        <span
-          className={`font-mono text-[11px] tracking-[0.22em] ${streamUp ? "text-hive-rec pulse-live" : "text-hive-sting"}`}
-        >
-          {streamUp ? "REC" : "OFF"}
-        </span>
+      <div className="flex min-w-0 items-center gap-3">
+        <p className="text-sm font-medium">Hive</p>
         <div className="flex items-center gap-2 text-sm">
           <span className={`h-2 w-2 rounded-full ${streamUp ? "bg-hive-rec pulse-live" : "bg-hive-sting"}`} />
-          <span data-testid="stream-status" className={streamUp ? "text-hive-ink" : "text-hive-sting"}>
+          <span data-testid="stream-status" className={streamUp ? "text-foreground" : "text-hive-sting"}>
             {streamUp ? "Live" : "Degraded"}
           </span>
         </div>
-        {coord ? <span className="hidden font-mono text-xs text-hive-quiet md:inline">{coord}</span> : null}
+        {coord ? <span className="hidden font-mono text-xs text-muted-foreground lg:inline">{coord}</span> : null}
       </div>
-      <div className="flex items-center gap-5 font-mono text-xs text-hive-quiet">
-        <span data-testid="clock">{clock}</span>
+      <div className="flex flex-1 justify-center">
+        <ViewToggle view={view} onChange={onView} />
+      </div>
+      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+        <span data-testid="clock" className="hidden font-mono text-xs sm:inline">
+          {clock}
+        </span>
         <span data-testid="sensor-count">
           {onlineSensors}/{totalSensors} sensors
         </span>
         <span data-testid="event-count">{events24h} events</span>
-        <button
-          type="button"
-          data-testid="sign-out"
-          onClick={onLogout}
-          className="text-hive-ink hover:text-hive-cyan"
-        >
+        <Button type="button" variant="ghost" size="sm" data-testid="sign-out" onClick={onLogout}>
           Sign out
-        </button>
+        </Button>
       </div>
     </header>
   );

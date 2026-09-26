@@ -17,5 +17,5 @@ test("stats KPIs and kill-chain charts render", async ({ page }) => {
   await expect(page.getByTestId("stats-view")).toContainText("Protocols");
   await expect(page.getByTestId("stats-protocol-legend")).toBeVisible();
   await expect(page.getByTestId("stats-top-ips")).toBeVisible();
-  await expect(page.getByTestId("timeline")).toBeVisible();
+  await expect(page.getByTestId("timeline")).toHaveCount(0);
 });

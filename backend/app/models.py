@@ -83,6 +83,11 @@ class StatsPayload(BaseModel):
     top_ips: list[NamedCount] = Field(default_factory=list)
     recent_commands: list[HitSnippet] = Field(default_factory=list)
     recent_payloads: list[HitSnippet] = Field(default_factory=list)
+    type_totals: list[NamedCount] = Field(default_factory=list)
+    facet_ips: list[NamedCount] = Field(default_factory=list)
+    facet_countries: list[NamedCount] = Field(default_factory=list)
+    facet_ports: list[PortCount] = Field(default_factory=list)
+    facet_sessions: list[str] = Field(default_factory=list)
 
 
 class EventList(BaseModel):
@@ -104,6 +109,9 @@ class EventFilters(BaseModel):
     protocol: str | None = None
     severity: str | None = None
     event_type: str | None = None
+    src_country: str | None = None
+    dst_port: int | None = None
+    session_id: str | None = None
     time_from: str | None = Field(default=None, alias="from")
     time_to: str | None = Field(default=None, alias="to")
     q: str | None = None
