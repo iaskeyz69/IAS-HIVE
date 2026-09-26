@@ -75,7 +75,7 @@ export function StatsView({
     return (
       <div
         data-testid="stats-loading"
-        className={`absolute bottom-0 left-0 top-0 space-y-3 bg-background p-4 ${detailOpen ? "right-[27.5rem]" : "right-0"}`}
+        className={`absolute bottom-0 left-0 top-0 space-y-3 bg-background p-4 ${detailOpen ? "lg:right-[27.5rem]" : "right-0"}`}
       >
         <Skeleton className="h-9 w-64" />
         <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
@@ -99,7 +99,7 @@ export function StatsView({
   return (
     <div
       data-testid="stats-view"
-      className={`absolute bottom-0 left-0 top-0 overflow-auto bg-background p-4 ${detailOpen ? "right-[27.5rem]" : "right-0"}`}
+      className={`absolute bottom-0 left-0 top-0 overflow-auto bg-background p-4 ${detailOpen ? "lg:right-[27.5rem]" : "right-0"}`}
     >
       <div className="mb-3 flex flex-col gap-2">
         <TypeFilter value={eventType} counts={typeCounts} onChange={onEventType} />

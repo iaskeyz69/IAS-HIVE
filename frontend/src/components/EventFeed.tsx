@@ -37,8 +37,8 @@ export function EventFeed({
               >
                 <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: accent }} />
                 <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline justify-between gap-3">
-                    <span className="font-mono text-[13px] tabular-nums text-foreground">
+                  <span className="flex items-baseline gap-2">
+                    <span className="min-w-0 flex-1 truncate font-mono text-[13px] tabular-nums text-foreground">
                       {formatHiveClock(event.timestamp, timezone)}
                     </span>
                     <span className="shrink-0 text-xs font-medium" style={{ color: accent }}>

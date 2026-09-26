@@ -74,7 +74,7 @@ export function ConfigView({ token, detailOpen = false }: { token: string; detai
   return (
     <div
       data-testid="config-view"
-      className={`absolute bottom-0 left-0 top-0 overflow-auto bg-background p-4 ${detailOpen ? "right-[27.5rem]" : "right-0"}`}
+      className={`absolute bottom-0 left-0 top-0 overflow-auto bg-background p-4 ${detailOpen ? "lg:right-[27.5rem]" : "right-0"}`}
     >
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>

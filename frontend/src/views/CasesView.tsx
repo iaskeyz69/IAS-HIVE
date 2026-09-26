@@ -42,7 +42,7 @@ export function CasesView({
   return (
     <div
       data-testid="cases-view"
-      className={`absolute inset-0 flex flex-col gap-4 overflow-hidden p-4 ${detailOpen ? "right-[27.5rem]" : ""}`}
+      className={`absolute inset-0 flex flex-col gap-4 overflow-hidden p-4 ${detailOpen ? "lg:right-[27.5rem]" : ""}`}
     >
       <Card data-testid="cases-brief">
         <CardHeader>
@@ -56,8 +56,8 @@ export function CasesView({
         </CardContent>
       </Card>
 
-      <div className={`grid min-h-0 flex-1 gap-4 ${active ? "grid-cols-[22rem_minmax(0,1fr)]" : "grid-cols-1"}`}>
-        <ScrollArea className="min-h-0 rounded-xl border border-white/10">
+      <div className={`grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-auto lg:overflow-hidden ${active ? "lg:grid-cols-[22rem_minmax(0,1fr)]" : ""}`}>
+        <ScrollArea className="max-h-72 min-h-0 rounded-xl border border-white/10 lg:h-full lg:max-h-none">
           <div data-testid="cases-list" className="flex flex-col">
             {cases.map((item) => {
               const on = item.session_id === active?.session_id;
@@ -85,7 +85,7 @@ export function CasesView({
         </ScrollArea>
 
         {active ? (
-          <ScrollArea className="min-h-0 rounded-xl border border-white/10">
+          <ScrollArea className="min-h-0 rounded-xl border border-white/10 lg:h-full">
             <article data-testid="case-detail" className="space-y-5 p-5">
               <div>
                 <p data-testid="case-verdict" className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -126,14 +126,14 @@ export function CasesView({
                 <section data-testid="case-lies">
                   <h3 className="text-sm text-muted-foreground">What they believed, and what the container did</h3>
                   <div className="mt-2 overflow-hidden rounded-lg border border-white/10">
-                    <div className="grid grid-cols-2 border-b border-white/10 bg-[#161616] text-xs text-muted-foreground">
+                    <div className="grid grid-cols-1 border-b border-white/10 bg-[#161616] text-xs text-muted-foreground lg:grid-cols-2">
                       <div className="px-3 py-2">Attacker saw</div>
-                      <div className="border-l border-white/10 px-3 py-2">Real effect</div>
+                      <div className="border-t border-white/10 px-3 py-2 lg:border-l lg:border-t-0">Real effect</div>
                     </div>
                     {active.lies.map((row, index) => (
-                      <div key={`${row.timestamp}-${index}`} className="grid grid-cols-2 border-b border-white/10 text-sm last:border-b-0">
+                      <div key={`${row.timestamp}-${index}`} className="grid grid-cols-1 border-b border-white/10 text-sm last:border-b-0 lg:grid-cols-2">
                         <div className="px-3 py-2">{row.attacker_saw}</div>
-                        <div className="border-l border-white/10 px-3 py-2 text-muted-foreground">{row.real_effect}</div>
+                        <div className="border-t border-white/10 px-3 py-2 text-muted-foreground lg:border-l lg:border-t-0">{row.real_effect}</div>
                       </div>
                     ))}
                   </div>

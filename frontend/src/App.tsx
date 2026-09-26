@@ -28,6 +28,7 @@ export default function App() {
   const [token, setToken] = useState<string | null>(() => loadAuth());
   const [view, setView] = useState<ViewId>("map3d");
   const [basemap, setBasemap] = useState<BasemapId>("satellite");
+  const [mapPanel, setMapPanel] = useState<"sensors" | "live" | null>(null);
 
   const onAuthFail = useCallback(() => {
     clearAuth();
@@ -148,12 +149,36 @@ export default function App() {
 
         {showMap ? (
           <>
-            <div className="absolute right-3 top-3 z-30">
+            <div className={`absolute right-3 top-3 z-30 ${mapPanel ? "max-md:hidden" : ""}`}>
               <BasemapToggle value={basemap} onChange={setBasemap} />
+            </div>
+            <div className="absolute inset-x-3 bottom-[4.75rem] z-30 flex justify-center lg:hidden">
+              <div className="flex rounded-full bg-[#161616] p-1">
+                <button
+                  type="button"
+                  data-testid="map-panel-sensors"
+                  aria-pressed={mapPanel === "sensors"}
+                  onClick={() => setMapPanel((current) => (current === "sensors" ? null : "sensors"))}
+                  className={`rounded-full px-3 py-1 text-sm ${mapPanel === "sensors" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                >
+                  Sensors
+                </button>
+                <button
+                  type="button"
+                  data-testid="map-panel-live"
+                  aria-pressed={mapPanel === "live"}
+                  onClick={() => setMapPanel((current) => (current === "live" ? null : "live"))}
+                  className={`rounded-full px-3 py-1 text-sm ${mapPanel === "live" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                >
+                  Live
+                </button>
+              </div>
             </div>
             <aside
               data-testid="left-rail"
-              className="absolute bottom-[4.75rem] left-3 top-3 z-20 flex w-72 flex-col gap-3 overflow-auto"
+              className={`absolute bottom-[7.25rem] left-3 top-3 z-20 w-72 max-md:right-3 max-md:w-auto max-md:rounded-xl max-md:bg-[#111111] max-md:p-2 flex-col gap-3 overflow-auto lg:bottom-[4.75rem] lg:right-auto lg:w-72 lg:bg-transparent lg:p-0 ${
+                mapPanel === "live" ? "hidden lg:flex" : mapPanel === "sensors" ? "flex" : "hidden md:flex"
+              }`}
             >
               <section data-testid="connection-card" className="hive-glass rounded-xl p-3">
                 <p className="text-sm text-muted-foreground">Connection</p>
@@ -190,7 +215,9 @@ export default function App() {
             </aside>
             <div
               data-testid="live-card"
-              className="hive-glass absolute bottom-[4.75rem] right-3 top-14 z-20 flex w-80 flex-col overflow-hidden rounded-xl"
+              className={`hive-glass absolute inset-x-3 bottom-[7.25rem] top-14 z-20 w-auto max-w-full flex-col overflow-hidden rounded-xl md:inset-x-auto md:right-3 md:w-80 lg:bottom-[4.75rem] ${
+                mapPanel === "live" ? "flex" : "hidden lg:flex"
+              }`}
             >
               <p className="border-b border-white/10 px-4 py-2.5 text-sm text-muted-foreground">Live</p>
               <ScrollArea className="min-h-0 flex-1">

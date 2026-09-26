@@ -90,9 +90,9 @@ export function TableView({
   const filtered =
     Boolean(eventType || timeWindow || srcIp || country || dstPort != null || sessionId || search.trim());
 
-  function header(col: Col, label: string) {
+  function header(col: Col, label: string, className = "") {
     return (
-      <TableHead>
+      <TableHead className={className}>
         <button
           type="button"
           data-testid={`table-sort-${col}`}
@@ -121,7 +121,7 @@ export function TableView({
   return (
     <div
       data-testid="table-view"
-      className={`absolute bottom-0 left-0 top-0 flex flex-col bg-background p-4 ${detailOpen ? "right-[27.5rem]" : "right-0"}`}
+      className={`absolute bottom-0 left-0 top-0 flex flex-col bg-background p-4 ${detailOpen ? "lg:right-[27.5rem]" : "right-0"}`}
     >
       <div className="mb-3 flex flex-col gap-3">
         <TypeFilter value={eventType} counts={typeCounts} onChange={onEventType} />
@@ -156,15 +156,15 @@ export function TableView({
             ) : null}
           </div>
         ) : (
-          <Table>
+          <Table className="max-md:table-fixed">
             <TableHeader className="sticky top-0 z-10 bg-card">
               <TableRow>
                 {header("event_type", "Type")}
                 {header("timestamp", `Time (${tzAbbrev(timezone)})`)}
                 {header("src_ip", "Source")}
                 {header("summary", "What happened")}
-                {header("dst_port", "Port")}
-                {header("session_id", "Session")}
+                {header("dst_port", "Port", "hidden md:table-cell")}
+                {header("session_id", "Session", "hidden md:table-cell")}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -210,7 +210,7 @@ export function TableView({
                         />
                       </div>
                     </TableCell>
-                    <TableCell data-testid="table-summary" className="max-w-[28rem] text-foreground">
+                    <TableCell data-testid="table-summary" className="max-w-[7rem] text-foreground md:max-w-[28rem]">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className="block truncate">{summary}</span>
@@ -218,14 +218,14 @@ export function TableView({
                         <TooltipContent>{summary}</TooltipContent>
                       </Tooltip>
                     </TableCell>
-                    <TableCell className="font-mono text-muted-foreground">
+                    <TableCell className="hidden font-mono text-muted-foreground md:table-cell">
                       <FilterValue
                         label={portLabel(event.dst_port, event.protocol)}
                         onPick={() => onDstPort(event.dst_port)}
                         testid="table-port"
                       />
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
+                    <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
                       {event.session_id ? (
                         <FilterValue
                           label={sanitizeDisplay(event.session_id)}

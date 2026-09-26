@@ -37,9 +37,9 @@ export function TopBar({
   return (
     <header
       data-testid="topbar"
-      className="relative z-50 flex h-14 shrink-0 items-center gap-4 border-b border-white/10 bg-background px-4"
+      className="relative z-50 flex h-[6.75rem] shrink-0 flex-col gap-2 border-b border-white/10 bg-background px-3 pt-2.5 lg:h-14 lg:flex-row lg:items-center lg:gap-4 lg:px-4 lg:pt-0"
     >
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3 max-lg:pr-44">
         <p className="text-sm font-medium">Hive</p>
         <div className="flex items-center gap-2 text-sm">
           <span className={`h-2 w-2 rounded-full ${streamUp ? "bg-hive-rec pulse-live" : "bg-hive-sting"}`} />
@@ -49,17 +49,21 @@ export function TopBar({
         </div>
         {coord ? <span className="hidden font-mono text-xs text-muted-foreground lg:inline">{coord}</span> : null}
       </div>
-      <div className="flex flex-1 justify-center">
+      <div className="min-w-0 overflow-x-auto lg:flex lg:flex-1 lg:justify-center">
         <ViewToggle view={view} onChange={onView} />
       </div>
-      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+      <div className="absolute right-3 top-2.5 flex items-center gap-3 text-sm text-muted-foreground lg:static lg:gap-4">
         <span data-testid="clock" className="hidden font-mono text-xs sm:inline">
           {clock}
         </span>
         <span data-testid="sensor-count">
-          {onlineSensors}/{totalSensors} sensors
+          {onlineSensors}/{totalSensors}
+          <span className="hidden lg:inline"> sensors</span>
         </span>
-        <span data-testid="event-count">{events24h} events</span>
+        <span data-testid="event-count">
+          {events24h}
+          <span className="hidden lg:inline"> events</span>
+        </span>
         <Button type="button" variant="ghost" size="sm" data-testid="sign-out" onClick={onLogout}>
           Sign out
         </Button>

@@ -101,7 +101,7 @@ export function HitFilters({
               Custom
             </Button>
           </PopoverTrigger>
-          <PopoverContent>
+          <PopoverContent className="w-[min(20rem,calc(100vw-2rem))]">
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="filter-time-from">From</Label>

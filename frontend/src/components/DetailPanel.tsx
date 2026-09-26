@@ -34,7 +34,7 @@ export function DetailPanel({
       <SheetContent
         overlay={false}
         data-testid="detail-panel"
-        className="bottom-20 right-3 top-[4.25rem] h-auto w-[26rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl"
+        className="bottom-[4.75rem] left-3 right-3 top-[7.25rem] h-auto w-auto max-w-none overflow-hidden rounded-xl lg:bottom-20 lg:left-auto lg:right-3 lg:top-[4.25rem] lg:w-[26rem] lg:max-w-[calc(100vw-1.5rem)]"
         onPointerDownOutside={(event) => event.preventDefault()}
         onInteractOutside={(event) => event.preventDefault()}
       >

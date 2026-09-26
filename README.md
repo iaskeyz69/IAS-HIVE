@@ -224,6 +224,16 @@ the attacker was shown, and the fact that the host did not run it.
 `Asia/Kuala_Lumpur`. The API writes it to `reports/overnight-YYYY-MM-DD.txt`
 the first time that window is read. That directory is gitignored.
 
+The customer pack and the sales guide are PDFs from the same sessions:
+
+```bash
+python3 scripts/commercial_pdfs.py
+```
+
+That writes `reports/customer-pack-YYYY-MM-DD.pdf` and
+`reports/how-to-sell-YYYY-MM-DD.pdf`. The pack is the file you hand a customer.
+Pasted SSH private keys are redacted.
+
 ## API (all REST routes require HTTP Basic)
 
 | Method | Path | Purpose |

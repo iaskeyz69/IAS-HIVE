@@ -13,9 +13,9 @@ const VIEWS: { id: ViewId; label: string; testid: string }[] = [
 export function ViewToggle({ view, onChange }: { view: ViewId; onChange: (id: ViewId) => void }) {
   return (
     <Tabs value={view} onValueChange={(next) => onChange(next as ViewId)}>
-      <TabsList data-testid="view-toggle">
+      <TabsList data-testid="view-toggle" className="w-max">
         {VIEWS.map((item) => (
-          <TabsTrigger key={item.id} value={item.id} data-testid={item.testid} aria-pressed={view === item.id}>
+          <TabsTrigger key={item.id} value={item.id} data-testid={item.testid} aria-pressed={view === item.id} className="px-2.5 lg:px-3">
             {item.label}
           </TabsTrigger>
         ))}

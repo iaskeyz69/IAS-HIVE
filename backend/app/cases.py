@@ -24,7 +24,8 @@ PAYLOAD_VERBS = {
     "perl",
     "php",
 }
-URL_RE = re.compile(r"https?://\S+")
+URL_RE = re.compile(r"https?://[^\s)'\"<>]+")
+SHELL_SPLIT = re.compile(r"\s*(?:&&|\|\||;|\|)\s*")
 VERDICT_LABEL = {
     "scanner": "Scanner",
     "password_guess": "Password guess",
@@ -100,10 +101,21 @@ def command_verb(command: str) -> str:
     parts = command.strip().split()
     if not parts:
         return ""
-    verb = parts[0].rsplit("/", 1)[-1].lower()
+    verb = parts[0].rsplit("/", 1)[-1].lower().strip("`'\"")
     if verb == "sudo" and len(parts) > 1:
-        verb = parts[1].rsplit("/", 1)[-1].lower()
+        verb = parts[1].rsplit("/", 1)[-1].lower().strip("`'\"")
+    if not verb or verb in {"then", "else", "fi", "do", "done", "if"}:
+        return ""
     return verb
+
+
+def command_verbs(command: str) -> list[str]:
+    verbs: list[str] = []
+    for part in SHELL_SPLIT.split(command):
+        verb = command_verb(part)
+        if verb and (not verbs or verbs[-1] != verb):
+            verbs.append(verb)
+    return verbs
 
 
 def _eventid(obj: dict) -> str:
@@ -111,8 +123,7 @@ def _eventid(obj: dict) -> str:
 
 
 def _is_payload_command(command: str) -> bool:
-    verb = command_verb(command)
-    if verb in PAYLOAD_VERBS:
+    if any(verb in PAYLOAD_VERBS for verb in command_verbs(command)):
         return True
     lowered = command.lower()
     return "chmod +x" in lowered or "base64 -d" in lowered or "/dev/tcp" in lowered
@@ -263,7 +274,12 @@ def build_cases(events: list[EventLike], tz: ZoneInfo | None = None) -> list[Ses
             if pair and len(lies) < 40:
                 lies.append(LieRow(timestamp=event.timestamp, command=command or eventid or event.event_type, attacker_saw=pair[0], real_effect=pair[1]))
         verdict = _verdict(rows)
-        shapes[session_id] = tuple(command_verb(command) for command in commands if command_verb(command))
+        verbs: list[str] = []
+        for command in commands:
+            for verb in command_verbs(command):
+                if not verbs or verbs[-1] != verb:
+                    verbs.append(verb)
+        shapes[session_id] = tuple(verbs)
         started[session_id] = rows[0].timestamp
         drafts.append((session_id, rows, verdict, commands, files, lies, login_fails, login_ok))
 
