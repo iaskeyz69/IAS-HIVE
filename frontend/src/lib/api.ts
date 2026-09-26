@@ -2,9 +2,11 @@ import { authHeader } from "./auth";
 import type {
   BaitApplyResult,
   BaitPayload,
+  BriefPayload,
   EventType,
   HiveEvent,
   SensorStatus,
+  SessionCase,
   StatsPayload,
   TimelineBucket,
   TimeWindow,
@@ -108,6 +110,8 @@ export const api = {
   timeline: (token: string, hours = 1, sensorId?: string | null) =>
     request<TimelineBucket[]>(token, `/api/timeline${queryString({ hours, sensor_id: sensorId })}`),
   summary: (token: string) => request<{ events_24h: number; sensors: number }>(token, "/api/summary"),
+  cases: (token: string) => request<{ cases: SessionCase[] }>(token, "/api/cases"),
+  brief: (token: string) => request<BriefPayload>(token, "/api/brief"),
   bait: (token: string) => request<BaitPayload>(token, "/api/bait"),
   saveBait: (token: string, services: Record<string, boolean>) =>
     request<BaitPayload>(token, "/api/bait", { method: "PUT", body: JSON.stringify({ services }) }),

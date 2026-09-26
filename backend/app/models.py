@@ -145,3 +145,39 @@ class BaitApplyResult(BaseModel):
     actions: list[str] = Field(default_factory=list)
     services: list[BaitService] = Field(default_factory=list)
     bind: str = "10.0.20.3"
+
+
+class LieRowModel(BaseModel):
+    timestamp: str
+    command: str
+    attacker_saw: str
+    real_effect: str
+
+
+class SessionCaseModel(BaseModel):
+    session_id: str
+    src_ip: str
+    src_country: str
+    protocol: str
+    dst_port: int
+    started: str
+    ended: str
+    verdict: str
+    verdict_label: str
+    summary: str
+    commands: list[str] = Field(default_factory=list)
+    files: list[str] = Field(default_factory=list)
+    cluster_name: str = ""
+    cluster_line: str = ""
+    lies: list[LieRowModel] = Field(default_factory=list)
+
+
+class CaseList(BaseModel):
+    cases: list[SessionCaseModel]
+
+
+class BriefPayload(BaseModel):
+    paragraph: str
+    window_start: str
+    window_end: str
+    saved_path: str = ""

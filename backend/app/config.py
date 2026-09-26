@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     cowrie_container: str = "hive-cowrie"
     opencanary_container: str = "hive-opencanary"
     tz: str = "Asia/Kuala_Lumpur"
+    reports_dir: str = "./reports"
 
 
 class SensorBook(BaseModel):

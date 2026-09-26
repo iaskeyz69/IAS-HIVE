@@ -1,6 +1,6 @@
 export type Severity = "low" | "medium" | "high";
 export type EventType = "scan" | "login_attempt" | "payload" | "command";
-export type ViewId = "map2d" | "map3d" | "table" | "stats" | "config";
+export type ViewId = "map2d" | "map3d" | "table" | "cases" | "stats" | "config";
 export type BasemapId = "satellite" | "normal";
 
 export interface HiveEvent {
@@ -96,6 +96,38 @@ export interface BaitService {
 export interface BaitPayload {
   bind: string;
   services: BaitService[];
+}
+
+export interface LieRow {
+  timestamp: string;
+  command: string;
+  attacker_saw: string;
+  real_effect: string;
+}
+
+export interface SessionCase {
+  session_id: string;
+  src_ip: string;
+  src_country: string;
+  protocol: string;
+  dst_port: number;
+  started: string;
+  ended: string;
+  verdict: string;
+  verdict_label: string;
+  summary: string;
+  commands: string[];
+  files: string[];
+  cluster_name: string;
+  cluster_line: string;
+  lies: LieRow[];
+}
+
+export interface BriefPayload {
+  paragraph: string;
+  window_start: string;
+  window_end: string;
+  saved_path: string;
 }
 
 export interface BaitApplyResult {

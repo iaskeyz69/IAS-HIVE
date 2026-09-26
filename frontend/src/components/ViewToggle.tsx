@@ -5,6 +5,7 @@ const VIEWS: { id: ViewId; label: string; testid: string }[] = [
   { id: "map2d", label: "Map", testid: "view-map" },
   { id: "map3d", label: "Globe", testid: "view-globe" },
   { id: "table", label: "Table", testid: "view-table" },
+  { id: "cases", label: "Cases", testid: "view-cases" },
   { id: "stats", label: "Stats", testid: "view-stats" },
   { id: "config", label: "Config", testid: "view-config" },
 ];

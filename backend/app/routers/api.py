@@ -7,7 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.auth import require_basic
 from app.config import SensorBook, get_settings, host_timezone
-from app.db import events_since_count, last_events_for_sensors, list_events, stats, timeline
+from app.cases import brief_window, build_cases, overnight_paragraph
+from app.db import events_for_cases, events_since_count, last_events_for_sensors, list_events, stats, timeline
 from app.geo import geoip_available
 from app.bait import BIND, apply_services, current_services, save_services
 from app.models import (
@@ -15,10 +16,14 @@ from app.models import (
     BaitPayload,
     BaitService,
     BaitUpdate,
+    BriefPayload,
+    CaseList,
     EventFilters,
     EventList,
     HealthPayload,
+    LieRowModel,
     SensorStatus,
+    SessionCaseModel,
     StatsPayload,
     TimelineBucket,
 )
@@ -141,6 +146,62 @@ def build_router(book: SensorBook) -> APIRouter:
             "events_24h": await events_since_count(since),
             "sensors": len(book.sensors),
         }
+
+    @api.get("/cases", response_model=CaseList)
+    async def cases() -> CaseList:
+        built = build_cases(await events_for_cases())
+        return CaseList(
+            cases=[
+                SessionCaseModel(
+                    session_id=case.session_id,
+                    src_ip=case.src_ip,
+                    src_country=case.src_country,
+                    protocol=case.protocol,
+                    dst_port=case.dst_port,
+                    started=case.started,
+                    ended=case.ended,
+                    verdict=case.verdict,
+                    verdict_label=case.verdict_label,
+                    summary=case.summary,
+                    commands=case.commands,
+                    files=case.files,
+                    cluster_name=case.cluster_name,
+                    cluster_line=case.cluster_line,
+                    lies=[
+                        LieRowModel(
+                            timestamp=row.timestamp,
+                            command=row.command,
+                            attacker_saw=row.attacker_saw,
+                            real_effect=row.real_effect,
+                        )
+                        for row in case.lies
+                    ],
+                )
+                for case in built[:80]
+            ]
+        )
+
+    @api.get("/brief", response_model=BriefPayload)
+    async def brief() -> BriefPayload:
+        start, end = brief_window()
+        built = build_cases(await events_for_cases())
+        paragraph = overnight_paragraph(built, start, end)
+        saved = ""
+        directory = Path(get_settings().reports_dir)
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+            path = directory / f"overnight-{end.strftime('%Y-%m-%d')}.txt"
+            if not path.exists():
+                path.write_text(paragraph + "\n", encoding="utf-8")
+            saved = str(path)
+        except OSError:
+            saved = ""
+        return BriefPayload(
+            paragraph=paragraph,
+            window_start=start.isoformat(),
+            window_end=end.isoformat(),
+            saved_path=saved,
+        )
 
     @api.get("/bait", response_model=BaitPayload)
     async def bait_get() -> BaitPayload:

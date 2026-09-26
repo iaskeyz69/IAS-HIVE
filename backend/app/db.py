@@ -583,3 +583,24 @@ async def save_tail_state(log_path: str, inode: int, offset: int) -> None:
 
 def dump_event_json(event: HiveEvent) -> str:
     return json.dumps(event.model_dump(), separators=(",", ":"))
+
+
+async def events_for_cases(limit: int = 8000) -> list[HiveEvent]:
+    cap = max(1, min(limit, 20000))
+    conn = await connect()
+    try:
+        cur = await conn.execute(
+            """
+            SELECT * FROM events
+            WHERE session_id != ''
+            ORDER BY timestamp DESC
+            LIMIT ?
+            """,
+            (cap,),
+        )
+        rows = await cur.fetchall()
+        events = [_row_to_event(row) for row in rows]
+        events.reverse()
+        return events
+    finally:
+        await conn.close()

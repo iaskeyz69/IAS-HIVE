@@ -13,6 +13,7 @@ import type { BasemapId, ViewId } from "./types";
 import { MapboxView } from "./views/MapboxView";
 import { StatsView } from "./views/StatsView";
 import { ConfigView } from "./views/ConfigView";
+import { CasesView } from "./views/CasesView";
 import { TableView } from "./views/TableView";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -107,6 +108,13 @@ export default function App() {
             pageSize={data.pageSize}
             total={data.tableTotal}
             onPage={data.setPage}
+            detailOpen={Boolean(data.selectedEvent || data.selectedSensor)}
+          />
+        ) : null}
+        {view === "cases" ? (
+          <CasesView
+            token={token}
+            timezone={data.timezone}
             detailOpen={Boolean(data.selectedEvent || data.selectedSensor)}
           />
         ) : null}

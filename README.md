@@ -8,7 +8,7 @@ Hive does not invent new listen ports; Config only toggles that fixed catalog.
 ## What you get
 
 - FastAPI backend: JSONL tailers, MaxMind GeoLite2 (offline), SQLite, REST, WebSocket
-- React console: Map, Globe, Table, Stats, and Config. The live feed, sensor rail, and timeline stay on the map and globe. A hit opens in a side sheet.
+- React console: Map, Globe, Table, Cases, Stats, and Config. The live feed, sensor rail, and timeline stay on the map and globe. A hit opens in a side sheet. Cases turns each SSH session into a verdict, a cluster, and a lie ledger.
 - Management compose on `hive_mgmt`; bait compose on `hive_bait`
 - Event retention **30 days** (`HIVE_RETENTION_DAYS`)
 
@@ -114,7 +114,16 @@ Cowrie presents an **office Linux jump host** (`kl-jump-01`). Listings come from
 `sensors/cowrie/fs.pickle`; file bodies from `sensors/cowrie/honeyfs`
 (`/root`, `/home/itadmin`, `/srv/share/{HR,Finance,IT}`). All of that content is
 fiction. Do not copy real keys, VPN profiles, or Hive `.env` into honeyfs.
-Rebuild the pickle after editing honeyfs:
+The jump host is not frozen. `sensors/cowrie/living_office.py` rewrites the motd
+check line, today's desktop ticket, and one backup command in bash history.
+Those paths already exist in the pickle, so Cowrie serves the new bodies without
+a rebuild. Run it once a day (cron is enough):
+
+```bash
+python3 sensors/cowrie/living_office.py
+```
+
+Rebuild the pickle after adding or removing honeyfs paths:
 
 ```bash
 docker cp hive-cowrie:/cowrie/cowrie-git/src/cowrie/data/fs.pickle /tmp/fs.pickle.base
@@ -196,6 +205,25 @@ Live dashboard tests (Playwright) live in `e2e/`. They need `HIVE_USER`,
 `HIVE_PASSWORD`, and a running dashboard. `HIVE_BASE_URL` defaults to
 `http://10.0.20.3:8443`.
 
+## Cases
+
+**Cases** groups events that share a Cowrie `session` id.
+
+| Verdict | When |
+|---|---|
+| Scanner | Connect and leave. No login. |
+| Password guess | Login attempts, then no commands. |
+| Hands on keyboard | Commands, and none of them look like a download. |
+| Payload | A file event, or `wget` / `curl` / `scp` / `base64` / `chmod +x`. |
+
+A repeated command shape is a cluster: "Same cluster as Tuesday, 14 earlier sessions."
+The lie ledger is two columns for each login, command, and file event: the reply
+the attacker was shown, and the fact that the host did not run it.
+
+**Overnight brief** is one paragraph for the 24 hours that closed at 08:00
+`Asia/Kuala_Lumpur`. The API writes it to `reports/overnight-YYYY-MM-DD.txt`
+the first time that window is read. That directory is gitignored.
+
 ## API (all REST routes require HTTP Basic)
 
 | Method | Path | Purpose |
@@ -206,6 +234,8 @@ Live dashboard tests (Playwright) live in `e2e/`. They need `HIVE_USER`,
 | GET | `/api/stats` | Countries, ports, time series, protocols, and facet lists. Same time and facet filters as events, without `q` / `protocol` / `severity` |
 | GET | `/api/timeline?hours=1` | Minute buckets for the scrubber |
 | GET | `/api/summary` | 24h count |
+| GET | `/api/cases` | Session cases: verdict, commands, cluster, lie ledger |
+| GET | `/api/brief` | Overnight paragraph through 08:00 MYT, saved under `reports/` |
 | GET | `/api/bait` | Allowlisted bait toggles + running state |
 | PUT | `/api/bait` | Persist allowlisted `enabled` flags only |
 | POST | `/api/bait/apply` | start/stop/restart the two sensor containers |
@@ -261,5 +291,6 @@ sensors/opencanary.conf       OpenCanary modules (enabled flags only from Config
 data/logs/                    bind-mount target for sensor JSONL
 data/geoip/                   GeoLite2-City.mmdb + GeoLite2-ASN.mmdb
 data/db/                      hive.sqlite + bait.json
+reports/                      overnight brief text, gitignored
 e2e/                          Playwright against the live dashboard
 ```

@@ -15,8 +15,10 @@ services:
       HIVE_SENSORS_FILE: /app/sensors.yaml
       TZ: ${HIVE_TZ:-Asia/Kuala_Lumpur}
       HIVE_TZ: ${HIVE_TZ:-Asia/Kuala_Lumpur}
+      HIVE_REPORTS_DIR: /data/reports
     volumes:
       - ./sensors.yaml:/app/sensors.yaml:ro
+      - ./reports:/data/reports
       - ./sensors/opencanary.conf:/app/sensors/opencanary.conf
       - ./data/logs:/logs:ro
       - ./data/geoip:/geoip:ro
