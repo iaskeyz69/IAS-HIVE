@@ -23,7 +23,7 @@ export function Login({ onAuthed }: { onAuthed: (token: string) => void }) {
     } catch (err) {
       clearAuth();
       if (err instanceof AuthError) setError("Wrong user or password");
-      else setError("Hive is unreachable");
+      else setError("IAS-HIVE is unreachable");
     } finally {
       setBusy(false);
     }
@@ -33,7 +33,8 @@ export function Login({ onAuthed }: { onAuthed: (token: string) => void }) {
     <div className="flex h-full items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm">
         <form data-testid="login-form" onSubmit={submit} className="p-6">
-          <p className="text-2xl font-medium">Hive</p>
+          <img src="/onex-logo.png" alt="Onex" className="h-10 w-auto" />
+          <p className="mt-4 text-2xl font-medium">IAS-HIVE</p>
           <p className="mt-2 text-sm text-muted-foreground">Sign in to watch the bait sensors.</p>
           <Label className="mt-6 block" htmlFor="operator">
             Operator

@@ -40,7 +40,8 @@ export function TopBar({
       className="relative z-50 flex h-[6.75rem] shrink-0 flex-col gap-2 border-b border-white/10 bg-background px-3 pt-2.5 lg:h-14 lg:flex-row lg:items-center lg:gap-4 lg:px-4 lg:pt-0"
     >
       <div className="flex min-w-0 items-center gap-3 max-lg:pr-44">
-        <p className="text-sm font-medium">Hive</p>
+        <img src="/onex-logo.png" alt="Onex" className="h-5 w-auto" />
+        <p className="text-sm font-medium">IAS-HIVE</p>
         <div className="flex items-center gap-2 text-sm">
           <span className={`h-2 w-2 rounded-full ${streamUp ? "bg-hive-rec pulse-live" : "bg-hive-sting"}`} />
           <span data-testid="stream-status" className={streamUp ? "text-foreground" : "text-hive-sting"}>

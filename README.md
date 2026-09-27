@@ -1,9 +1,13 @@
-# IAS Hive — Honeypot Command Center
+# IAS-HIVE — Honeypot Command Center
 
 Self-hosted dashboard for Cowrie and OpenCanary telemetry. The management
 stack tails sensor JSON logs, normalizes events, and draws them on a dark console.
 Bait listeners are a **separate** compose project (`docker-compose.sensors.yml`).
 Hive does not invent new listen ports; Config only toggles that fixed catalog.
+
+![IAS-HIVE architecture](docs/ias-hive-architecture.png)
+
+The poster is the homelab layout: Cowrie and OpenCanary on the bait bridge, the console on a separate management bridge. The editable diagram is [`docs/ias-hive-architecture.drawio`](docs/ias-hive-architecture.drawio).
 
 ## What you get
 
