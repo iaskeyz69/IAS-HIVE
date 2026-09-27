@@ -11,10 +11,13 @@ services:
     ports:
       - "10.0.20.3:2222:2222"
     volumes:
+      # Cowrie process is uid 999; this directory must be writable by 999
+      # or jsonlog never starts and the dashboard stays frozen.
       - ./data/logs/cowrie-01:/cowrie/cowrie-git/var/log/cowrie
       - ./sensors/cowrie/honeyfs:/cowrie/honeyfs:ro
       - ./sensors/cowrie/fs.pickle:/cowrie/custom/fs.pickle:ro
       - ./sensors/cowrie/cowrie.cfg:/cowrie/cowrie-git/etc/cowrie.cfg:ro
+      - ./sensors/cowrie/userdb.txt:/cowrie/cowrie-git/etc/userdb.txt:ro
     networks:
       - hive_bait
 

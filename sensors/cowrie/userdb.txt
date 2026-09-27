@@ -1,0 +1,5 @@
+# Only these three names get a Cowrie shell. First match wins.
+# '*' as password = any password. Do not add *:x:* or every username works.
+root:x:*
+itadmin:x:*
+finance:x:*
