@@ -1,63 +1,74 @@
 import { useEffect, useState } from "react";
-
-function utcStamp(): string {
-  const now = new Date();
-  return now.toISOString().replace(".000Z", "Z").slice(0, 19) + "Z";
-}
+import { formatHiveNow } from "../lib/time";
+import type { ViewId } from "../types";
+import { Button } from "@/components/ui/button";
+import { ViewToggle } from "./ViewToggle";
 
 export function TopBar({
   onlineSensors,
   totalSensors,
   events24h,
   streamUp,
+  coord,
+  timezone,
+  view,
+  onView,
   onLogout,
 }: {
   onlineSensors: number;
   totalSensors: number;
   events24h: number;
   streamUp: boolean;
+  coord?: string | null;
+  timezone: string;
+  view: ViewId;
+  onView: (id: ViewId) => void;
   onLogout: () => void;
 }) {
-  const [clock, setClock] = useState(utcStamp);
+  const [clock, setClock] = useState(() => formatHiveNow(timezone));
 
   useEffect(() => {
-    const id = window.setInterval(() => setClock(utcStamp()), 1000);
+    const tick = () => setClock(formatHiveNow(timezone));
+    tick();
+    const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [timezone]);
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-hive-line bg-hive-panel px-4">
-      <div className="flex items-center gap-6">
-        <div>
-          <p className="label-hud text-hive-gold">IAS HIVE</p>
-          <p className="font-sans text-sm tracking-wide text-white">COMMAND CENTER</p>
+    <header
+      data-testid="topbar"
+      className="relative z-50 flex h-[6.75rem] shrink-0 flex-col gap-2 border-b border-white/10 bg-background px-3 pt-2.5 lg:h-14 lg:flex-row lg:items-center lg:gap-4 lg:px-4 lg:pt-0"
+    >
+      <div className="flex min-w-0 items-center gap-3 max-lg:pr-44">
+        <img src="/onex-logo.png" alt="Onex" className="h-5 w-auto" />
+        <p className="text-sm font-medium">IAS-HIVE</p>
+        <div className="flex items-center gap-2 text-sm">
+          <span className={`h-2 w-2 rounded-full ${streamUp ? "bg-hive-rec pulse-live" : "bg-hive-sting"}`} />
+          <span data-testid="stream-status" className={streamUp ? "text-foreground" : "text-hive-sting"}>
+            {streamUp ? "Live" : "Degraded"}
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`h-2 w-2 rounded-full ${streamUp ? "bg-hive-live pulse-live" : "bg-hive-threat"}`} />
-          <span className="label-hud text-white">{streamUp ? "ONLINE" : "DEGRADED"}</span>
-        </div>
+        {coord ? <span className="hidden font-mono text-xs text-muted-foreground lg:inline">{coord}</span> : null}
       </div>
-      <div className="flex items-center gap-8 font-mono text-xs">
-        <Stat label="UTC" value={clock} />
-        <Stat label="SENSORS" value={`${onlineSensors}/${totalSensors}`} />
-        <Stat label="24H EVENTS" value={String(events24h)} />
-        <button
-          type="button"
-          onClick={onLogout}
-          className="label-hud text-hive-muted hover:text-hive-gold"
-        >
-          LOCK
-        </button>
+      <div className="min-w-0 overflow-x-auto lg:flex lg:flex-1 lg:justify-center">
+        <ViewToggle view={view} onChange={onView} />
+      </div>
+      <div className="absolute right-3 top-2.5 flex items-center gap-3 text-sm text-muted-foreground lg:static lg:gap-4">
+        <span data-testid="clock" className="hidden font-mono text-xs sm:inline">
+          {clock}
+        </span>
+        <span data-testid="sensor-count">
+          {onlineSensors}/{totalSensors}
+          <span className="hidden lg:inline"> sensors</span>
+        </span>
+        <span data-testid="event-count">
+          {events24h}
+          <span className="hidden lg:inline"> events</span>
+        </span>
+        <Button type="button" variant="ghost" size="sm" data-testid="sign-out" onClick={onLogout}>
+          Sign out
+        </Button>
       </div>
     </header>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="label-hud">{label}</p>
-      <p className="text-hive-gold">{value}</p>
-    </div>
   );
 }

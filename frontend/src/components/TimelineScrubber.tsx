@@ -1,14 +1,17 @@
 import { useMemo, useRef, useState, type MouseEvent } from "react";
+import { formatHiveTime } from "../lib/time";
 import type { TimelineBucket, TimeWindow } from "../types";
 
 export function TimelineScrubber({
   buckets,
   window,
   onChange,
+  timezone,
 }: {
   buckets: TimelineBucket[];
   window: TimeWindow | null;
   onChange: (window: TimeWindow | null) => void;
+  timezone: string;
 }) {
   const max = Math.max(1, ...buckets.map((b) => b.count));
   const drag = useRef<{ start: number; end: number } | null>(null);
@@ -43,19 +46,21 @@ export function TimelineScrubber({
   }
 
   return (
-    <div className="flex h-16 shrink-0 items-center gap-3 border-t border-hive-line bg-hive-panel px-3">
-      <div>
-        <p className="label-hud">VOLUME / 60M</p>
+    <div data-testid="timeline" className="hive-glass flex h-14 items-center gap-4 rounded-xl px-4">
+      <div className="w-24 shrink-0">
+        <p className="text-sm text-foreground">Last hour</p>
         <button
           type="button"
-          className="font-mono text-[10px] text-hive-muted hover:text-hive-gold"
+          data-testid="timeline-live"
+          className="text-sm text-muted-foreground hover:text-foreground"
           onClick={() => onChange(null)}
         >
-          {window ? "CLEAR WINDOW" : "LIVE"}
+          {window ? "Clear window" : "Live"}
         </button>
       </div>
       <div
-        className="flex h-10 flex-1 cursor-ew-resize items-end gap-px"
+        data-testid="timeline-bars"
+        className="flex h-8 flex-1 cursor-ew-resize items-end gap-px"
         onMouseDown={(ev) => {
           const i = idxFromEvent(ev);
           drag.current = { start: i, end: i };
@@ -81,12 +86,12 @@ export function TimelineScrubber({
         {buckets.map((bucket, i) => {
           const active =
             selected && i >= Math.min(selected[0], selected[1]) && i <= Math.max(selected[0], selected[1]);
-          const h = Math.max(2, Math.round((bucket.count / max) * 36));
+          const h = Math.max(2, Math.round((bucket.count / max) * 28));
           return (
             <div
               key={bucket.t}
-              title={`${bucket.t} · ${bucket.count}`}
-              className={`flex-1 ${active ? "bg-hive-gold" : "bg-hive-gold/30"}`}
+              title={`${formatHiveTime(bucket.t, timezone)} · ${bucket.count}`}
+              className={`flex-1 ${active ? "bg-hive-blue" : "bg-hive-blue/30"}`}
               style={{ height: h }}
             />
           );

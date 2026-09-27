@@ -1,0 +1,4 @@
+Guest SSID: KL-Guest
+Passphrase (rotate monthly): office-guest-2026-09
+VLAN: 40 (isolated)
+Do not give staff the guest key.

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import hmac
-import secrets
 
 from fastapi import Depends, HTTPException, WebSocket, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -10,12 +9,17 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from app.config import get_settings
 
 _basic = HTTPBasic()
+_COMPARE_KEY = b"ias-hive-basic"
+
+
+def _digest(value: str) -> bytes:
+    return hmac.new(_COMPARE_KEY, value.encode("utf-8"), "sha256").digest()
 
 
 def _creds_ok(username: str, password: str) -> bool:
     settings = get_settings()
-    user_ok = hmac.compare_digest(username.encode(), settings.user.encode())
-    pass_ok = hmac.compare_digest(password.encode(), settings.password.encode())
+    user_ok = hmac.compare_digest(_digest(username), _digest(settings.user))
+    pass_ok = hmac.compare_digest(_digest(password), _digest(settings.password))
     return user_ok and pass_ok
 
 
@@ -31,7 +35,7 @@ def require_basic(credentials: HTTPBasicCredentials = Depends(_basic)) -> str:
 
 def _decode_basic_token(token: str) -> tuple[str, str] | None:
     try:
-        decoded = base64.b64decode(token).decode("utf-8")
+        decoded = base64.b64decode(token, validate=True).decode("utf-8")
         username, password = decoded.split(":", 1)
         return username, password
     except Exception:
@@ -57,7 +61,3 @@ async def require_ws_auth(websocket: WebSocket) -> bool:
 
     await websocket.close(code=4401)
     return False
-
-
-def new_nonce() -> str:
-    return secrets.token_hex(8)

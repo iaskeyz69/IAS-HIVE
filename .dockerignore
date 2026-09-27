@@ -8,3 +8,5 @@ data/db/*.sqlite
 data/db/*.sqlite-*
 data/geoip/*.mmdb
 **/.env
+e2e
+frontend/e2e

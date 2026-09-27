@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     sensor_online_minutes: int = 5
     raw_max_len: int = 4096
     cors_origin: str = "http://127.0.0.1:8443"
+    opencanary_conf: str = "/app/sensors/opencanary.conf"
+    bait_state_path: str = "/data/bait.json"
+    docker_sock: str = "/var/run/docker.sock"
+    cowrie_container: str = "hive-cowrie"
+    opencanary_container: str = "hive-opencanary"
+    tz: str = "Asia/Kuala_Lumpur"
+    reports_dir: str = "./reports"
 
 
 class SensorBook(BaseModel):
@@ -55,6 +62,25 @@ def get_settings() -> Settings:
             "HIVE_USER and HIVE_PASSWORD must be set. Copy .env.example to .env."
         )
     return settings
+
+
+def host_timezone() -> str:
+    settings = get_settings()
+    if settings.tz.strip():
+        return settings.tz.strip()
+    tz_file = Path("/etc/timezone")
+    if tz_file.is_file():
+        name = tz_file.read_text(encoding="utf-8").strip()
+        if name:
+            return name
+    localtime = Path("/etc/localtime")
+    try:
+        resolved = str(localtime.resolve())
+        if "zoneinfo/" in resolved:
+            return resolved.rsplit("zoneinfo/", 1)[1]
+    except OSError:
+        pass
+    return "Asia/Kuala_Lumpur"
 
 
 def load_sensors(path: str | None = None) -> SensorBook:

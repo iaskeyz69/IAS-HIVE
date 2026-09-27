@@ -1,0 +1,42 @@
+name: hive-sensors
+
+# Bait-plane only. Do not attach this stack to hive_mgmt.
+# Logs land in ./data/logs for hive-api to tail read-only.
+
+services:
+  cowrie:
+    image: cowrie/cowrie:latest
+    container_name: hive-cowrie
+    restart: unless-stopped
+    ports:
+      - "10.0.20.3:2222:2222"
+    volumes:
+      # Cowrie process is uid 999; this directory must be writable by 999
+      # or jsonlog never starts and the dashboard stays frozen.
+      - ./data/logs/cowrie-01:/cowrie/cowrie-git/var/log/cowrie
+      - ./sensors/cowrie/honeyfs:/cowrie/honeyfs:ro
+      - ./sensors/cowrie/fs.pickle:/cowrie/custom/fs.pickle:ro
+      - ./sensors/cowrie/cowrie.cfg:/cowrie/cowrie-git/etc/cowrie.cfg:ro
+      - ./sensors/cowrie/userdb.txt:/cowrie/cowrie-git/etc/userdb.txt:ro
+    networks:
+      - hive_bait
+
+  opencanary:
+    image: thinkst/opencanary:latest
+    container_name: hive-opencanary
+    restart: unless-stopped
+    ports:
+      - "10.0.20.3:21:21"
+      - "10.0.20.3:23:23"
+      - "10.0.20.3:3306:3306"
+      - "10.0.20.3:6379:6379"
+      - "10.0.20.3:8080:8080"
+    volumes:
+      - ./sensors/opencanary.conf:/etc/opencanaryd/opencanary.conf:ro
+      - ./data/logs/opencanary-01:/var/tmp/opencanary
+    networks:
+      - hive_bait
+
+networks:
+  hive_bait:
+    driver: bridge

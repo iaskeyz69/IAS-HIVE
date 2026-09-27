@@ -1,0 +1,10 @@
+[Unit]
+Description=Keep IAS Hive dashboard and bait sensors running
+After=ias-hive.service docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/satux/Documents/IAS-HIVE
+ExecStart=/usr/bin/docker compose -f /home/satux/Documents/IAS-HIVE/docker-compose.yml up -d
+ExecStart=/usr/bin/docker compose -f /home/satux/Documents/IAS-HIVE/docker-compose.sensors.yml up -d

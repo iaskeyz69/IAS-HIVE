@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings, load_sensors
-from app.db import init_db, purge_old
+from app.db import backfill_missing_src_geo, init_db, purge_old
 from app.ingest.demo import run_demo
 from app.ingest.tailer import run_tailers
 from app.routers.api import build_router
@@ -24,6 +24,9 @@ async def lifespan(app: FastAPI):
     book = load_sensors()
     app.state.book = book
     await init_db()
+    filled = await backfill_missing_src_geo()
+    if filled:
+        log.info("backfilled src geo on %s events", filled)
     log.info("hive api up  demo=%s  sensors=%s", settings.demo, len(book.sensors))
 
     stop = asyncio.Event()
@@ -52,12 +55,13 @@ def create_app() -> FastAPI:
         "http://localhost:8443",
         "http://127.0.0.1:5173",
         "http://localhost:5173",
+        "http://10.0.20.3:8443",
     }
     app.add_middleware(
         CORSMiddleware,
         allow_origins=sorted(origins),
         allow_credentials=True,
-        allow_methods=["GET"],
+        allow_methods=["GET", "PUT", "POST", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type"],
     )
     app.include_router(build_router(book), prefix="/api")

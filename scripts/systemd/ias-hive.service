@@ -1,0 +1,16 @@
+[Unit]
+Description=IAS Hive dashboard and bait sensors
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/home/satux/Documents/IAS-HIVE/scripts/hive-ensure.sh
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target

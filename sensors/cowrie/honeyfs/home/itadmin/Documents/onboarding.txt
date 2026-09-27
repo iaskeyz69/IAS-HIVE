@@ -1,0 +1,5 @@
+Welcome to KL jump (kl-jump-01).
+
+1. Connect with KL-Office.ovpn
+2. Map \\fs01.corp.internal\share  (also mounted here as /srv/share)
+3. Put contractor accounts on IT/vpn-users.txt

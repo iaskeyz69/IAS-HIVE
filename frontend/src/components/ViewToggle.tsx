@@ -1,27 +1,25 @@
 import type { ViewId } from "../types";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const VIEWS: { id: ViewId; label: string }[] = [
-  { id: "map2d", label: "2D" },
-  { id: "map3d", label: "3D" },
-  { id: "table", label: "TABLE" },
-  { id: "stats", label: "STATS" },
+const VIEWS: { id: ViewId; label: string; testid: string }[] = [
+  { id: "map2d", label: "Map", testid: "view-map" },
+  { id: "map3d", label: "Globe", testid: "view-globe" },
+  { id: "table", label: "Table", testid: "view-table" },
+  { id: "cases", label: "Cases", testid: "view-cases" },
+  { id: "stats", label: "Stats", testid: "view-stats" },
+  { id: "config", label: "Config", testid: "view-config" },
 ];
 
 export function ViewToggle({ view, onChange }: { view: ViewId; onChange: (id: ViewId) => void }) {
   return (
-    <div className="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 border border-hive-line bg-hive-bg/80">
-      {VIEWS.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          onClick={() => onChange(item.id)}
-          className={`px-4 py-1 font-sans text-[10px] tracking-hud ${
-            view === item.id ? "bg-hive-gold/20 text-hive-gold" : "text-hive-muted hover:text-white"
-          }`}
-        >
-          {item.label}
-        </button>
-      ))}
-    </div>
+    <Tabs value={view} onValueChange={(next) => onChange(next as ViewId)}>
+      <TabsList data-testid="view-toggle" className="w-max">
+        {VIEWS.map((item) => (
+          <TabsTrigger key={item.id} value={item.id} data-testid={item.testid} aria-pressed={view === item.id} className="px-2.5 lg:px-3">
+            {item.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }

@@ -1,5 +1,6 @@
 # Management-plane only. Do not attach this stack to a VLAN 7 / bait bridge.
-# Dashboard is bound to loopback — reach it via SSH tunnel or VPN, never from bait NICs.
+# Dashboard binds loopback and 10.0.20.3 (enx68e43b309f1c) — never 0.0.0.0.
+# Bait listeners live in docker-compose.sensors.yml, not this file.
 
 services:
   api:
@@ -12,11 +13,22 @@ services:
       HIVE_GEOIP_CITY: /geoip/GeoLite2-City.mmdb
       HIVE_GEOIP_ASN: /geoip/GeoLite2-ASN.mmdb
       HIVE_SENSORS_FILE: /app/sensors.yaml
+      TZ: ${HIVE_TZ:-Asia/Kuala_Lumpur}
+      HIVE_TZ: ${HIVE_TZ:-Asia/Kuala_Lumpur}
+      HIVE_REPORTS_DIR: /data/reports
     volumes:
       - ./sensors.yaml:/app/sensors.yaml:ro
+      - ./reports:/data/reports
+      - ./sensors/opencanary.conf:/app/sensors/opencanary.conf
       - ./data/logs:/logs:ro
       - ./data/geoip:/geoip:ro
       - ./data/db:/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      # Engine socket is used only to start/stop hive-cowrie and restart hive-opencanary.
+      - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - "${DOCKER_GID:-127}"
     networks:
       - hive_mgmt
     restart: unless-stopped
@@ -33,6 +45,7 @@ services:
       - api
     ports:
       - "127.0.0.1:8443:80"
+      - "10.0.20.3:8443:80"
     networks:
       - hive_mgmt
     restart: unless-stopped
@@ -40,4 +53,3 @@ services:
 networks:
   hive_mgmt:
     driver: bridge
-    internal: true

@@ -43,6 +43,20 @@ class TimelineBucket(BaseModel):
     count: int
 
 
+class TypeTimeBucket(BaseModel):
+    t: str
+    scan: int = 0
+    login_attempt: int = 0
+    command: int = 0
+    payload: int = 0
+
+
+class HitSnippet(BaseModel):
+    timestamp: str = ""
+    src_ip: str = ""
+    text: str = ""
+
+
 class NamedCount(BaseModel):
     name: str
     count: int
@@ -55,10 +69,25 @@ class PortCount(BaseModel):
 
 class StatsPayload(BaseModel):
     events_24h: int
+    unique_ips: int = 0
+    by_type: list[NamedCount] = Field(default_factory=list)
+    login_success: int = 0
+    login_fail: int = 0
+    lan_count: int = 0
+    internet_count: int = 0
     top_countries: list[NamedCount]
     top_ports: list[PortCount]
     over_time: list[TimelineBucket]
+    over_time_by_type: list[TypeTimeBucket] = Field(default_factory=list)
     protocols: list[NamedCount]
+    top_ips: list[NamedCount] = Field(default_factory=list)
+    recent_commands: list[HitSnippet] = Field(default_factory=list)
+    recent_payloads: list[HitSnippet] = Field(default_factory=list)
+    type_totals: list[NamedCount] = Field(default_factory=list)
+    facet_ips: list[NamedCount] = Field(default_factory=list)
+    facet_countries: list[NamedCount] = Field(default_factory=list)
+    facet_ports: list[PortCount] = Field(default_factory=list)
+    facet_sessions: list[str] = Field(default_factory=list)
 
 
 class EventList(BaseModel):
@@ -71,6 +100,7 @@ class HealthPayload(BaseModel):
     demo: bool = False
     sensors: int = 0
     geoip: bool = False
+    timezone: str = "Asia/Kuala_Lumpur"
 
 
 class EventFilters(BaseModel):
@@ -78,6 +108,10 @@ class EventFilters(BaseModel):
     src_ip: str | None = None
     protocol: str | None = None
     severity: str | None = None
+    event_type: str | None = None
+    src_country: str | None = None
+    dst_port: int | None = None
+    session_id: str | None = None
     time_from: str | None = Field(default=None, alias="from")
     time_to: str | None = Field(default=None, alias="to")
     q: str | None = None
@@ -85,3 +119,65 @@ class EventFilters(BaseModel):
     offset: int = 0
 
     model_config = {"populate_by_name": True}
+
+
+class BaitService(BaseModel):
+    id: str
+    label: str
+    port: int
+    sensor: str
+    enabled: bool
+    running: bool | None = None
+
+
+class BaitPayload(BaseModel):
+    bind: str = "10.0.20.3"
+    services: list[BaitService]
+
+
+class BaitUpdate(BaseModel):
+    services: dict[str, bool]
+
+
+class BaitApplyResult(BaseModel):
+    ok: bool
+    error: str | None = None
+    actions: list[str] = Field(default_factory=list)
+    services: list[BaitService] = Field(default_factory=list)
+    bind: str = "10.0.20.3"
+
+
+class LieRowModel(BaseModel):
+    timestamp: str
+    command: str
+    attacker_saw: str
+    real_effect: str
+
+
+class SessionCaseModel(BaseModel):
+    session_id: str
+    src_ip: str
+    src_country: str
+    protocol: str
+    dst_port: int
+    started: str
+    ended: str
+    verdict: str
+    verdict_label: str
+    summary: str
+    commands: list[str] = Field(default_factory=list)
+    files: list[str] = Field(default_factory=list)
+    cluster_name: str = ""
+    cluster_line: str = ""
+    lies: list[LieRowModel] = Field(default_factory=list)
+
+
+class CaseList(BaseModel):
+    cases: list[SessionCaseModel]
+
+
+class BriefPayload(BaseModel):
+    paragraph: str
+    window_start: str
+    window_end: str
+    saved_path: str = ""
